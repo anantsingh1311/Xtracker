@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">XTracker logo</title>
+  <desc id="desc">A strong lifter holding a barbell overhead.</desc>
+  <rect width="512" height="512" rx="64" fill="#f8fafc"/>
+  <g fill="#020617">
+    <circle cx="92" cy="178" r="54"/>
+    <circle cx="420" cy="178" r="54"/>
+    <path d="M139 159c72-16 162-16 234 0l-5 27c-69-14-155-14-224 0z"/>
+    <rect x="129" y="149" width="23" height="43" rx="8"/>
+    <rect x="360" y="149" width="23" height="43" rx="8"/>
+    <circle cx="256" cy="238" r="32"/>
+    <path d="M143 189c18-4 30 5 35 25 7 29 23 54 48 76l-27 35c-41-29-64-72-69-128-1-5 4-7 13-8z"/>
+    <path d="M369 189c-18-4-30 5-35 25-7 29-23 54-48 76l27 35c41-29 64-72 69-128 1-5-4-7-13-8z"/>
+    <path d="M190 309c13-28 35-43 66-43s53 15 66 43c-24 27-37 58-40 93h-52c-3-35-16-66-40-93z"/>
+    <path d="M231 377 156 458 97 482h96l63-68z"/>
+    <path d="M281 377 356 458l59 24h-96l-63-68z"/>
+  </g>
+</svg>
