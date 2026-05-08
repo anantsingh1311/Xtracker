@@ -24,9 +24,29 @@ const app = express();
 const port = Number(process.env.PORT) || 5000;
 const mongoUri = process.env.ATLAS_URI;
 const isProduction = process.env.NODE_ENV === "production";
-const clientOrigins = (process.env.CLIENT_URL || "")
+
+function normalizeOrigin(value) {
+    if (!value) {
+        return "";
+    }
+
+    try {
+        return new URL(value).origin;
+    } catch (error) {
+        return value.trim().replace(/\/+$/, "");
+    }
+}
+
+const clientOrigins = [
+    process.env.CLIENT_URL,
+    process.env.CLIENT_URLS,
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_ORIGIN
+]
+    .filter(Boolean)
+    .join(",")
     .split(",")
-    .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 const buildPath = path.resolve(__dirname, "..", "build");
 const buildIndexPath = path.join(buildPath, "index.html");
@@ -37,7 +57,7 @@ function buildCorsOptions() {
     if (clientOrigins.length) {
         return {
             origin(origin, callback) {
-                if (!origin || clientOrigins.includes(origin)) {
+                if (!origin || clientOrigins.includes(normalizeOrigin(origin))) {
                     return callback(null, true);
                 }
 

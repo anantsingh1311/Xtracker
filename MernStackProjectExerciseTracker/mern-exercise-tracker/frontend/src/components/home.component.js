@@ -33,17 +33,17 @@ export default class Home extends Component {
                     </div>
                 )}
 
-                <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-                    <div className="panel-fade">
+                <div className="home-hero-grid grid items-start gap-8">
+                    <div className="home-hero-copy panel-fade pt-2">
                         <p className="text-sm font-black uppercase tracking-[0.35em] text-cyan-700">Exercise tracking made simple</p>
-                        <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
+                        <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
                             Log smarter workouts with searchable exercise data.
                         </h1>
                         <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
                             XTracker helps you search exercises, understand the movement, record duration and auto-estimated calories, then review your workout history from one clean dashboard.
                         </p>
 
-                        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                        <div className="home-cta-row mt-8 flex flex-col gap-3">
                             <Link
                                 to={user ? "/create" : "/login-user"}
                                 className="rounded-2xl bg-slate-950 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.2em] text-white no-underline shadow-xl transition hover:-translate-y-1 hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-200"
@@ -67,24 +67,24 @@ export default class Home extends Component {
                         </div>
                     </div>
 
-                    <div className="panel-fade rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-                        <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                    <div className="panel-fade rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-5">
+                        <div className="rounded-3xl bg-slate-950 p-5 text-white sm:p-6">
                             <p className="text-sm font-bold uppercase tracking-[0.25em] text-lime-200">Today&apos;s flow</p>
-                            <div className="mt-6 space-y-4">
+                            <div className="mt-5 space-y-3">
                                 {[
                                     ["Search", "Find a movement by name, muscle, category, or equipment."],
                                     ["Learn", "Review instructions, images, videos, and author details."],
                                     ["Log", "Save duration and auto-estimated calories against your signed-in user."],
                                     ["Review", "Track every saved exercise in your logged list."]
                                 ].map(([title, description], index) => (
-                                    <div key={title} className="soft-card rounded-3xl border border-white/10 bg-white/10 p-4">
-                                        <div className="flex items-start gap-4">
-                                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-cyan-300 text-sm font-black text-slate-950">
+                                    <div key={title} className="soft-card rounded-2xl border border-white/10 bg-white/10 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-300 text-sm font-black text-slate-950">
                                                 {index + 1}
                                             </span>
                                             <div>
                                                 <h2 className="text-lg font-black">{title}</h2>
-                                                <p className="mt-1 text-sm leading-6 text-slate-300">{description}</p>
+                                                <p className="mt-1 text-sm leading-6 text-slate-300 sm:leading-7">{description}</p>
                                             </div>
                                         </div>
                                     </div>

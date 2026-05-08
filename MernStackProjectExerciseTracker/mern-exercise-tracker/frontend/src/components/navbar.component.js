@@ -108,14 +108,14 @@ export default class Navbar extends Component {
               </span>
             </Link>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="navbar-desktop-links hidden items-center gap-2 md:flex">
             {this.renderLinks()}
           </div>
 
             <button
               type="button"
               onClick={this.toggleMenu}
-              className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-400/30 md:hidden"
+              className="navbar-menu-button rounded-2xl border border-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-400/30 md:hidden"
               aria-expanded={this.state.isMenuOpen}
             >
               Menu

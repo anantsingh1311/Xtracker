@@ -15,13 +15,14 @@ const QUICK_PROMPTS = [
 
 function readInitialMinimizedState() {
   if (typeof window === "undefined") {
-    return false;
+    return true;
   }
 
   try {
-    return window.localStorage.getItem(CHATBOT_MINIMIZED_KEY) === "true";
+    const savedPreference = window.localStorage.getItem(CHATBOT_MINIMIZED_KEY);
+    return savedPreference === null ? true : savedPreference === "true";
   } catch (error) {
-    return false;
+    return true;
   }
 }
 
@@ -152,17 +153,46 @@ function Chatbot() {
   }, [applyChatStatus, currentUserId]);
 
   if (!currentUser) {
+    if (isMinimized) {
+      return (
+        <button
+          aria-label="Open Shaky chatbot"
+          type="button"
+          onClick={() => setIsMinimized(false)}
+          className="chatbot-launcher fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-3xl border border-slate-200 bg-slate-950 px-4 py-3 text-left text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300/40"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-lg">
+            <ShakyLogo size="launcher" />
+          </span>
+          <span className="chatbot-launcher__text">
+            <span className="block text-sm font-black uppercase tracking-[0.15em]">Shaky</span>
+            <span className="block text-xs text-slate-300">Log in for chat</span>
+          </span>
+        </button>
+      );
+    }
+
     return (
       <aside className="fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-slate-200 bg-white shadow-2xl">
         <div className="rounded-t-3xl bg-slate-950 px-4 py-3 text-white">
-          <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-lg">
-              <ShakyLogo size="launcher" />
-            </span>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Shaky</p>
-              <h3 className="mt-1 text-lg font-black leading-tight">Workout help on demand</h3>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-lg">
+                <ShakyLogo size="launcher" />
+              </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">Shaky</p>
+                <h3 className="mt-1 text-lg font-black leading-tight">Workout help on demand</h3>
+              </div>
             </div>
+            <button
+              aria-label="Minimize Shaky chatbot"
+              type="button"
+              onClick={() => setIsMinimized(true)}
+              className="rounded-2xl border border-white/15 px-3 py-2 text-xs font-black uppercase tracking-[0.15em] text-slate-200 transition hover:bg-white/10 hover:text-white"
+            >
+              Minimize
+            </button>
           </div>
         </div>
         <div className="space-y-3 px-4 py-4">
@@ -272,12 +302,12 @@ function Chatbot() {
         aria-label="Open Shaky chatbot"
         type="button"
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-950 px-4 py-3 text-left text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300/40"
+        className="chatbot-launcher fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-950 px-4 py-3 text-left text-white shadow-2xl transition hover:-translate-y-0.5 hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300/40"
       >
         <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-lg">
           <ShakyLogo isThinking={isSending} size="launcher" />
         </span>
-        <span>
+        <span className="chatbot-launcher__text">
           <span className="block text-sm font-black uppercase tracking-[0.15em]">Shaky</span>
           <span className="block text-xs text-slate-300">{statusLabel} coach</span>
         </span>
