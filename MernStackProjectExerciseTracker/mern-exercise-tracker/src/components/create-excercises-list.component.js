@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
-import DatePicker from "react-datepicker";
 import { fetchCustomExercises, fetchExternalExercises, post } from "../services/api";
+import { formatDateInputValue, getWorkoutDateInputBounds } from "../utils/date-input";
 import { normalizeCustomExercise, normalizeExercises } from "../utils/external-exercises";
 import { getStoredUser } from "../utils/auth";
-import "react-datepicker/dist/react-datepicker.css";
 
 const LAST_WORKOUT_PROFILE_KEY = "xt_last_workout_profile";
 
@@ -57,7 +56,7 @@ export default class CreateExercise extends Component {
             calorieEstimate: null,
             estimateMeta: null,
             estimateError: '',
-            date: new Date(),
+            date: formatDateInputValue(),
             exercises: [],
             isLoadingExercises: true,
             exerciseError: '',
@@ -257,9 +256,9 @@ export default class CreateExercise extends Component {
         });
     }
 
-    OnChangeDate(date) {
+    OnChangeDate(e) {
         this.setState({
-            date: date
+            date: e.target.value
         });
     }
 
@@ -319,6 +318,7 @@ export default class CreateExercise extends Component {
     render() {
         const filteredExercises = this.GetFilteredExercises();
         const shouldShowResults = this.state.searchTerm && !this.state.description;
+        const dateBounds = getWorkoutDateInputBounds();
 
         return (
             <div className="page-fade mx-auto max-w-5xl py-6">
@@ -481,10 +481,13 @@ export default class CreateExercise extends Component {
 
                         <div className="md:col-span-2">
                             <label className="mb-2 block text-sm font-bold text-slate-700">Date</label>
-                            <DatePicker
-                                selected={this.state.date}
+                            <input
+                                type="date"
+                                required
+                                min={dateBounds.min}
+                                max={dateBounds.max}
+                                value={this.state.date}
                                 onChange={this.OnChangeDate}
-                                wrapperClassName="w-full"
                                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                             />
                         </div>

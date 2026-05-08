@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import DatePicker from "react-datepicker";
 import { useParams, useNavigate } from "react-router-dom";
 import { get, post } from "../services/api";
-import "react-datepicker/dist/react-datepicker.css";
+import { formatDateInputValue, getWorkoutDateInputBounds } from "../utils/date-input";
 
 const LAST_WORKOUT_PROFILE_KEY = "xt_last_workout_profile";
 const LB_TO_KG = 0.45359237;
@@ -45,7 +44,7 @@ export default function EditExercise() {
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(formatDateInputValue());
   const [bodyWeight, setBodyWeight] = useState(savedProfile.bodyWeight || "");
   const [weightUnit, setWeightUnit] = useState(savedProfile.weightUnit || "kg");
   const [intensity, setIntensity] = useState(savedProfile.intensity || "moderate");
@@ -81,7 +80,7 @@ export default function EditExercise() {
           activityCategory: exercise.activityCategory,
           metValue: exercise.metValue
         });
-        setDate(new Date(exercise.date));
+        setDate(formatDateInputValue(exercise.date));
         setError("");
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -187,6 +186,8 @@ export default function EditExercise() {
       setIsSaving(false);
     }
   };
+
+  const dateBounds = getWorkoutDateInputBounds();
 
   return (
     <div className="page-fade mx-auto max-w-5xl py-6">
@@ -301,10 +302,13 @@ export default function EditExercise() {
 
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-bold text-slate-700">Date</label>
-              <DatePicker
-                selected={date}
-                onChange={(d) => setDate(d)}
-                wrapperClassName="w-full"
+              <input
+                type="date"
+                required
+                min={dateBounds.min}
+                max={dateBounds.max}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
               />
             </div>
