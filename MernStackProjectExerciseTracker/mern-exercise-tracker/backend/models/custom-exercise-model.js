@@ -17,6 +17,11 @@ const customExerciseSchema = new Schema({
         minlength: 2,
         maxlength: 80
     },
+    workoutType: {
+        type: String,
+        enum: ["cardio", "strength"],
+        default: "strength"
+    },
     instructions: {
         type: String,
         trim: true,

@@ -6,6 +6,7 @@ const LIST_ITEM_MAX_LENGTH = 40;
 const LIST_MAX_ITEMS = 12;
 const SHORT_TEXT_MAX_LENGTH = 80;
 const INSTRUCTIONS_MAX_LENGTH = 1000;
+const WORKOUT_TYPES = ["cardio", "strength"];
 
 function sanitizeText(value, maxLength) {
     const text = typeof value === "string"
@@ -54,6 +55,7 @@ router.post("/", async (req, res) => {
     try {
         const name = sanitizeText(req.body?.name, SHORT_TEXT_MAX_LENGTH);
         const category = sanitizeText(req.body?.category, SHORT_TEXT_MAX_LENGTH);
+        const workoutType = WORKOUT_TYPES.includes(req.body?.workoutType) ? req.body.workoutType : "strength";
 
         if (!name || !category) {
             return res.status(400).json({ message: "Exercise name and category are required." });
@@ -62,6 +64,7 @@ router.post("/", async (req, res) => {
         const customExercise = new CustomExercise({
             name,
             category,
+            workoutType,
             instructions: sanitizeText(req.body?.instructions, INSTRUCTIONS_MAX_LENGTH),
             primaryMuscles: parseList(req.body.primaryMuscles),
             secondaryMuscles: parseList(req.body.secondaryMuscles),

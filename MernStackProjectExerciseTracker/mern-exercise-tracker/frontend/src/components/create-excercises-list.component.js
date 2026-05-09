@@ -5,6 +5,11 @@ import { normalizeCustomExercise, normalizeExercises } from "../utils/external-e
 import { getStoredUser } from "../utils/auth";
 
 const LAST_WORKOUT_PROFILE_KEY = "xt_last_workout_profile";
+const WORKOUT_TYPE_FILTERS = [
+    ["all", "All"],
+    ["cardio", "Cardio"],
+    ["strength", "Strength"]
+];
 
 function readSavedWorkoutProfile() {
     if (typeof window === "undefined") {
@@ -42,6 +47,12 @@ export default class CreateExercise extends Component {
         this.OnChangeBodyWeight = this.OnChangeBodyWeight.bind(this);
         this.OnChangeWeightUnit = this.OnChangeWeightUnit.bind(this);
         this.OnChangeIntensity = this.OnChangeIntensity.bind(this);
+        this.OnChangeLoadUnit = this.OnChangeLoadUnit.bind(this);
+        this.OnChangeLoadWeight = this.OnChangeLoadWeight.bind(this);
+        this.OnChangeReps = this.OnChangeReps.bind(this);
+        this.OnChangeSets = this.OnChangeSets.bind(this);
+        this.OnChangeWorkoutType = this.OnChangeWorkoutType.bind(this);
+        this.OnChangeWorkoutTypeFilter = this.OnChangeWorkoutTypeFilter.bind(this);
         this.OnSelectExercise = this.OnSelectExercise.bind(this);
         this.OnSubmit = this.OnSubmit.bind(this);
 
@@ -49,7 +60,13 @@ export default class CreateExercise extends Component {
             username: '',
             description: '',
             searchTerm: '',
+            workoutType: savedProfile.workoutType || 'strength',
+            workoutTypeFilter: 'all',
             duration: '',
+            sets: savedProfile.sets || '',
+            reps: savedProfile.reps || '',
+            loadWeight: savedProfile.loadWeight || '',
+            loadUnit: savedProfile.loadUnit || preferredWeightUnit,
             bodyWeight: savedProfile.bodyWeight || profileBodyWeight || '',
             weightUnit: preferredWeightUnit,
             intensity: savedProfile.intensity || 'moderate',
@@ -121,7 +138,7 @@ export default class CreateExercise extends Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
-        const watchedFields = ["description", "duration", "bodyWeight", "weightUnit", "intensity"];
+        const watchedFields = ["description", "workoutType", "duration", "sets", "reps", "loadWeight", "loadUnit", "bodyWeight", "weightUnit", "intensity"];
         const shouldRefreshEstimate = watchedFields.some((field) => prevState[field] !== this.state[field]);
 
         if (shouldRefreshEstimate) {
@@ -138,9 +155,13 @@ export default class CreateExercise extends Component {
     }
 
     hasEnoughEstimateInputs() {
+        const hasWorkDetails = this.state.workoutType === "strength"
+            ? Number(this.state.sets) > 0 && Number(this.state.reps) > 0 && Number(this.state.loadWeight || 0) >= 0
+            : Number(this.state.duration) > 0;
+
         return Boolean(
             this.state.description
-            && Number(this.state.duration) > 0
+            && hasWorkDetails
             && Number(this.state.bodyWeight) > 0
             && this.state.intensity
         );
@@ -181,7 +202,12 @@ export default class CreateExercise extends Component {
         try {
             const estimate = await post('/exercise/estimate', {
                 description: this.state.description,
+                workoutType: this.state.workoutType,
                 duration: Number(this.state.duration),
+                sets: Number(this.state.sets),
+                reps: Number(this.state.reps),
+                loadWeight: Number(this.state.loadWeight || 0),
+                loadUnit: this.state.loadUnit,
                 intensity: this.state.intensity,
                 weight: Number(this.state.bodyWeight),
                 weightUnit: this.state.weightUnit
@@ -224,17 +250,56 @@ export default class CreateExercise extends Component {
         });
     }
 
-    OnSelectExercise(exerciseName) {
+    OnSelectExercise(exercise) {
+        const exerciseName = exercise.displayName;
+
         this.setState({
             description: exerciseName,
             searchTerm: exerciseName,
+            workoutType: exercise.workoutType || this.state.workoutType,
             exerciseError: ''
+        });
+    }
+
+    OnChangeWorkoutType(e) {
+        this.setState({
+            workoutType: e.target.value
+        });
+    }
+
+    OnChangeWorkoutTypeFilter(type) {
+        this.setState({
+            workoutTypeFilter: type
         });
     }
 
     OnChangeDuration(e) {
         this.setState({
             duration: e.target.value
+        });
+    }
+
+    OnChangeSets(e) {
+        this.setState({
+            sets: e.target.value
+        });
+    }
+
+    OnChangeReps(e) {
+        this.setState({
+            reps: e.target.value
+        });
+    }
+
+    OnChangeLoadWeight(e) {
+        this.setState({
+            loadWeight: e.target.value
+        });
+    }
+
+    OnChangeLoadUnit(e) {
+        this.setState({
+            loadUnit: e.target.value
         });
     }
 
@@ -264,12 +329,15 @@ export default class CreateExercise extends Component {
 
     GetFilteredExercises() {
         const searchTerm = this.state.searchTerm.trim().toLowerCase();
+        const exercisesByType = this.state.workoutTypeFilter === "all"
+            ? this.state.exercises
+            : this.state.exercises.filter((exercise) => exercise.workoutType === this.state.workoutTypeFilter);
 
         if (!searchTerm) {
-            return this.state.exercises.slice(0, 10);
+            return exercisesByType.slice(0, 10);
         }
 
-        return this.state.exercises
+        return exercisesByType
             .filter(exercise => exercise.searchIndex.includes(searchTerm))
             .slice(0, 10);
     }
@@ -289,7 +357,12 @@ export default class CreateExercise extends Component {
         const exercise = {
             username: this.state.username,
             description: this.state.description,
+            workoutType: this.state.workoutType,
             duration: Number(this.state.duration),
+            sets: Number(this.state.sets),
+            reps: Number(this.state.reps),
+            loadWeight: Number(this.state.loadWeight || 0),
+            loadUnit: this.state.loadUnit,
             intensity: this.state.intensity,
             weight: Number(this.state.bodyWeight),
             weightUnit: this.state.weightUnit,
@@ -301,7 +374,12 @@ export default class CreateExercise extends Component {
             saveWorkoutProfile({
                 bodyWeight: this.state.bodyWeight,
                 intensity: this.state.intensity,
-                weightUnit: this.state.weightUnit
+                loadUnit: this.state.loadUnit,
+                loadWeight: this.state.loadWeight,
+                reps: this.state.reps,
+                sets: this.state.sets,
+                weightUnit: this.state.weightUnit,
+                workoutType: this.state.workoutType
             });
             window.location = "/Excercises";
         } catch (err) {
@@ -328,7 +406,7 @@ export default class CreateExercise extends Component {
                         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-200">Workout log</p>
                         <h2 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">Create Exercise Log</h2>
                         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                            Search the exercise library, select the movement you performed, then enter your workout details and let XTracker estimate calories automatically.
+                            Search the exercise library, choose cardio or strength, then enter the details XTracker needs to estimate calories automatically.
                         </p>
                     </div>
                 </div>
@@ -347,6 +425,22 @@ export default class CreateExercise extends Component {
 
                         <div className="relative md:col-span-2">
                             <label className="mb-2 block text-sm font-bold text-slate-700">Search Exercise</label>
+                            <div className="mb-3 flex flex-wrap gap-2">
+                                {WORKOUT_TYPE_FILTERS.map(([value, label]) => (
+                                    <button
+                                        type="button"
+                                        key={value}
+                                        onClick={() => this.OnChangeWorkoutTypeFilter(value)}
+                                        className={`rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+                                            this.state.workoutTypeFilter === value
+                                                ? "bg-slate-950 text-white shadow"
+                                                : "border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
                             <input
                                 type="text"
                                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
@@ -373,12 +467,12 @@ export default class CreateExercise extends Component {
                                                 <button
                                                     type="button"
                                                     key={exercise.id || exercise.uuid || exerciseName}
-                                                    onClick={() => this.OnSelectExercise(exerciseName)}
+                                                    onClick={() => this.OnSelectExercise(exercise)}
                                                     className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-cyan-50 hover:text-cyan-700"
                                                 >
                                                     <span className="block">{exerciseName}</span>
                                                     <span className="mt-1 block text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-                                                        {exercise.sourceType === "custom" ? "Custom exercise" : exercise.category?.name || "External exercise"}
+                                                        {exercise.workoutType} | {exercise.sourceType === "custom" ? "Custom exercise" : exercise.category?.name || "External exercise"}
                                                     </span>
                                                 </button>
                                             );
@@ -397,16 +491,16 @@ export default class CreateExercise extends Component {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-bold text-slate-700">Duration (minutes)</label>
-                            <input
-                                type="number"
+                            <label className="mb-2 block text-sm font-bold text-slate-700">Workout Type</label>
+                            <select
                                 required
-                                min="1"
+                                value={this.state.workoutType}
+                                onChange={this.OnChangeWorkoutType}
                                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
-                                value={this.state.duration}
-                                onChange={this.OnChangeDuration}
-                                placeholder="45"
-                            />
+                            >
+                                <option value="cardio">Cardio</option>
+                                <option value="strength">Strength</option>
+                            </select>
                         </div>
 
                         <div>
@@ -422,6 +516,78 @@ export default class CreateExercise extends Component {
                                 <option value="vigorous">Vigorous</option>
                             </select>
                         </div>
+
+                        {this.state.workoutType === "cardio" ? (
+                            <div className="md:col-span-2">
+                                <label className="mb-2 block text-sm font-bold text-slate-700">Duration (minutes)</label>
+                                <input
+                                    type="number"
+                                    required
+                                    min="1"
+                                    max="600"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                    value={this.state.duration}
+                                    onChange={this.OnChangeDuration}
+                                    placeholder="45"
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <div>
+                                    <label className="mb-2 block text-sm font-bold text-slate-700">Sets</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        max="50"
+                                        step="1"
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                        value={this.state.sets}
+                                        onChange={this.OnChangeSets}
+                                        placeholder="4"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-2 block text-sm font-bold text-slate-700">Reps per set</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        max="200"
+                                        step="1"
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                        value={this.state.reps}
+                                        onChange={this.OnChangeReps}
+                                        placeholder="10"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="mb-2 block text-sm font-bold text-slate-700">Lifted Weight</label>
+                                    <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
+                                        <input
+                                            type="number"
+                                            required
+                                            min="0"
+                                            max={this.state.loadUnit === "lb" ? "2204" : "1000"}
+                                            step="0.1"
+                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                            value={this.state.loadWeight}
+                                            onChange={this.OnChangeLoadWeight}
+                                            placeholder={this.state.loadUnit === "lb" ? "135" : "60"}
+                                        />
+                                        <select
+                                            value={this.state.loadUnit}
+                                            onChange={this.OnChangeLoadUnit}
+                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                        >
+                                            <option value="kg">kg</option>
+                                            <option value="lb">lb</option>
+                                        </select>
+                                    </div>
+                                    <p className="mt-2 text-xs font-semibold text-slate-500">Use 0 for bodyweight-only movements such as push ups.</p>
+                                </div>
+                            </>
+                        )}
 
                         <div className="md:col-span-2">
                             <label className="mb-2 block text-sm font-bold text-slate-700">Body Weight</label>
@@ -460,6 +626,11 @@ export default class CreateExercise extends Component {
                                         <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Method</p>
                                         <p className="mt-1 text-sm font-black text-slate-950">{this.state.estimateMeta.metValue} MET</p>
                                         <p className="text-xs text-slate-500">{this.state.estimateMeta.activityCategory}</p>
+                                        {this.state.estimateMeta.workoutType === "strength" && (
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {this.state.estimateMeta.setCount} x {this.state.estimateMeta.repsPerSet} | {this.state.estimateMeta.volumeLoadKg} kg volume
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -470,7 +641,7 @@ export default class CreateExercise extends Component {
 
                             {!this.state.isEstimating && !this.state.calorieEstimate && !this.state.estimateError && (
                                 <p className="mt-3 text-sm text-slate-600">
-                                    Select an exercise and enter duration, body weight, and intensity to calculate calories automatically.
+                                    Select an exercise and enter the visible workout details to calculate calories automatically.
                                 </p>
                             )}
 

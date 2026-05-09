@@ -5,6 +5,7 @@ import { formatDateInputValue, getWorkoutDateInputBounds } from "../utils/date-i
 
 const LAST_WORKOUT_PROFILE_KEY = "xt_last_workout_profile";
 const LB_TO_KG = 0.45359237;
+const STRENGTH_CATEGORY_PATTERN = /\b(strength|core|pilates|press|squat|deadlift|curl|lunge|plank|push|pull|row|raise|extension)\b/i;
 
 function readSavedWorkoutProfile() {
   if (typeof window === "undefined") {
@@ -36,6 +37,18 @@ function convertStoredWeightToDisplay(bodyWeightKg, weightUnit) {
   return bodyWeightKg;
 }
 
+function inferWorkoutType(exercise) {
+  if (exercise?.workoutType === "cardio" || exercise?.workoutType === "strength") {
+    return exercise.workoutType;
+  }
+
+  if (exercise?.setCount || exercise?.repsPerSet || STRENGTH_CATEGORY_PATTERN.test(`${exercise?.activityCategory || ""} ${exercise?.description || ""}`)) {
+    return "strength";
+  }
+
+  return "cardio";
+}
+
 export default function EditExercise() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,7 +56,12 @@ export default function EditExercise() {
 
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
+  const [workoutType, setWorkoutType] = useState(savedProfile.workoutType || "strength");
   const [duration, setDuration] = useState("");
+  const [sets, setSets] = useState(savedProfile.sets || "");
+  const [reps, setReps] = useState(savedProfile.reps || "");
+  const [loadWeight, setLoadWeight] = useState(savedProfile.loadWeight || "");
+  const [loadUnit, setLoadUnit] = useState(savedProfile.loadUnit || savedProfile.weightUnit || "kg");
   const [date, setDate] = useState(formatDateInputValue());
   const [bodyWeight, setBodyWeight] = useState(savedProfile.bodyWeight || "");
   const [weightUnit, setWeightUnit] = useState(savedProfile.weightUnit || "kg");
@@ -71,14 +89,23 @@ export default function EditExercise() {
 
         setUsername(exercise.username);
         setDescription(exercise.description);
+        setWorkoutType(inferWorkoutType(exercise));
         setDuration(exercise.duration);
+        setSets(exercise.setCount || "");
+        setReps(exercise.repsPerSet || "");
+        setLoadWeight(exercise.loadWeight ?? "");
+        setLoadUnit(exercise.loadUnit || exercise.weightUnit || "kg");
         setWeightUnit(exercise.weightUnit || "kg");
         setBodyWeight(convertStoredWeightToDisplay(exercise.bodyWeightKg, exercise.weightUnit || "kg"));
         setIntensity(exercise.intensity || "moderate");
         setCalorieEstimate(exercise.calories || 0);
         setEstimateMeta({
           activityCategory: exercise.activityCategory,
-          metValue: exercise.metValue
+          metValue: exercise.metValue,
+          repsPerSet: exercise.repsPerSet,
+          setCount: exercise.setCount,
+          volumeLoadKg: exercise.volumeLoadKg,
+          workoutType: inferWorkoutType(exercise)
         });
         setDate(formatDateInputValue(exercise.date));
         setError("");
@@ -105,7 +132,11 @@ export default function EditExercise() {
   }, [id]);
 
   useEffect(() => {
-    if (!description || Number(duration) <= 0 || Number(bodyWeight) <= 0 || !intensity) {
+    const hasWorkDetails = workoutType === "strength"
+      ? Number(sets) > 0 && Number(reps) > 0 && Number(loadWeight || 0) >= 0
+      : Number(duration) > 0;
+
+    if (!description || !hasWorkDetails || Number(bodyWeight) <= 0 || !intensity) {
       setCalorieEstimate(null);
       setEstimateMeta(null);
       setEstimateError("");
@@ -121,7 +152,12 @@ export default function EditExercise() {
       try {
         const estimate = await post("/exercise/estimate", {
           description,
+          workoutType,
           duration: Number(duration),
+          sets: Number(sets),
+          reps: Number(reps),
+          loadWeight: Number(loadWeight || 0),
+          loadUnit,
           intensity,
           weight: Number(bodyWeight),
           weightUnit
@@ -153,7 +189,7 @@ export default function EditExercise() {
       isMounted = false;
       window.clearTimeout(timerId);
     };
-  }, [bodyWeight, description, duration, intensity, weightUnit]);
+  }, [bodyWeight, description, duration, intensity, loadUnit, loadWeight, reps, sets, weightUnit, workoutType]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -163,7 +199,12 @@ export default function EditExercise() {
     const exercise = {
       username,
       description,
+      workoutType,
       duration,
+      sets,
+      reps,
+      loadWeight,
+      loadUnit,
       intensity,
       weight: bodyWeight,
       weightUnit,
@@ -175,7 +216,12 @@ export default function EditExercise() {
       saveWorkoutProfile({
         bodyWeight,
         intensity,
-        weightUnit
+        loadUnit,
+        loadWeight,
+        reps,
+        sets,
+        weightUnit,
+        workoutType
       });
       navigate("/Excercises");
     } catch (err) {
@@ -197,7 +243,7 @@ export default function EditExercise() {
           <p className="text-sm font-black uppercase tracking-[0.3em] text-rose-200">Workout history</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">Edit Exercise Log</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Update the exercise, duration, body weight, intensity, or date and XTracker will recalculate calories automatically.
+            Update the exercise type and details. Cardio uses minutes; strength uses sets, reps, and lifted weight.
           </p>
         </div>
       </div>
@@ -231,14 +277,15 @@ export default function EditExercise() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-bold text-slate-700">Duration (minutes)</label>
-              <input
-                type="number"
-                min="1"
+              <label className="mb-2 block text-sm font-bold text-slate-700">Workout Type</label>
+              <select
+                value={workoutType}
+                onChange={(e) => setWorkoutType(e.target.value)}
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-              />
+              >
+                <option value="cardio">Cardio</option>
+                <option value="strength">Strength</option>
+              </select>
             </div>
 
             <div>
@@ -254,12 +301,80 @@ export default function EditExercise() {
               </select>
             </div>
 
+            {workoutType === "cardio" ? (
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-bold text-slate-700">Duration (minutes)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="600"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Sets</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="50"
+                    step="1"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                    value={sets}
+                    onChange={(e) => setSets(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Reps per set</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="200"
+                    step="1"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Lifted Weight</label>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      max={loadUnit === "lb" ? "2204" : "1000"}
+                      step="0.1"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                      value={loadWeight}
+                      onChange={(e) => setLoadWeight(e.target.value)}
+                    />
+                    <select
+                      value={loadUnit}
+                      onChange={(e) => setLoadUnit(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                    </select>
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-slate-500">Use 0 for bodyweight-only movements.</p>
+                </div>
+              </>
+            )}
+
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-bold text-slate-700">Body Weight</label>
               <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                 <input
                   type="number"
-                  min="25"
+                  min={weightUnit === "lb" ? "55" : "25"}
                   step="0.1"
                   className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
                   value={bodyWeight}
@@ -283,12 +398,17 @@ export default function EditExercise() {
                   <p className="mt-2 text-4xl font-black text-slate-950">{calorieEstimate !== null ? calorieEstimate : "--"}</p>
                 </div>
                 {estimateMeta && (
-                  <div className="rounded-2xl bg-white px-4 py-3 text-right shadow-sm">
-                    <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Method</p>
-                    <p className="mt-1 text-sm font-black text-slate-950">{estimateMeta.metValue} MET</p>
-                    <p className="text-xs text-slate-500">{estimateMeta.activityCategory}</p>
-                  </div>
-                )}
+                <div className="rounded-2xl bg-white px-4 py-3 text-right shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Method</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">{estimateMeta.metValue} MET</p>
+                  <p className="text-xs text-slate-500">{estimateMeta.activityCategory}</p>
+                  {estimateMeta.workoutType === "strength" && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {estimateMeta.setCount} x {estimateMeta.repsPerSet} | {estimateMeta.volumeLoadKg} kg volume
+                    </p>
+                  )}
+                </div>
+              )}
               </div>
 
               {isEstimating && (

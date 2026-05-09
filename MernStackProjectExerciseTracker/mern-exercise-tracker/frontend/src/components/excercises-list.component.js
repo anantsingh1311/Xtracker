@@ -20,6 +20,41 @@ const toPositiveNumber = (value) => {
 
   return Number.isFinite(number) && number > 0 ? number : 0;
 };
+const WORKOUT_TYPE_FILTERS = [
+  ["all", "All"],
+  ["cardio", "Cardio"],
+  ["strength", "Strength"]
+];
+const STRENGTH_CATEGORY_PATTERN = /\b(strength|core|pilates|press|squat|deadlift|curl|lunge|plank|push|pull|row|raise|extension)\b/i;
+
+const getWorkoutType = (exercise) => {
+  if (exercise?.workoutType === "cardio" || exercise?.workoutType === "strength") {
+    return exercise.workoutType;
+  }
+
+  if (exercise?.setCount || exercise?.repsPerSet || STRENGTH_CATEGORY_PATTERN.test(`${exercise?.activityCategory || ""} ${exercise?.description || ""}`)) {
+    return "strength";
+  }
+
+  return "cardio";
+};
+
+const formatWorkoutType = (exercise) => {
+  const workoutType = getWorkoutType(exercise);
+  return workoutType.charAt(0).toUpperCase() + workoutType.slice(1);
+};
+
+const formatExerciseWork = (exercise) => {
+  if (getWorkoutType(exercise) === "strength") {
+    const sets = exercise.setCount || "--";
+    const reps = exercise.repsPerSet || "--";
+    const load = Number(exercise.loadWeight) > 0 ? `${exercise.loadWeight} ${exercise.loadUnit || "kg"}` : "bodyweight";
+
+    return `${sets} x ${reps} @ ${load}`;
+  }
+
+  return `${exercise.duration || 0} min`;
+};
 
 const formatShortDate = (dateKey) => {
   if (!dateKey || dateKey === "unknown") {
@@ -374,15 +409,18 @@ const ExerciseCard = (props) => (
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-700">{props.exercise.username}</p>
         <h2 className="mt-2 text-xl font-black text-slate-950">{props.exercise.description}</h2>
       </div>
-      <span className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white">
-        {props.exercise.calories || 0} est cal
-      </span>
+      <div className="text-right">
+        <span className="inline-block rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white">
+          {props.exercise.calories || 0} est cal
+        </span>
+        <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-700">{formatWorkoutType(props.exercise)}</p>
+      </div>
     </div>
 
     <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
       <div className="rounded-2xl bg-slate-100 p-3">
-        <p className="font-bold text-slate-500">Duration</p>
-        <p className="mt-1 font-black text-slate-950">{props.exercise.duration} min</p>
+        <p className="font-bold text-slate-500">Work</p>
+        <p className="mt-1 font-black text-slate-950">{formatExerciseWork(props.exercise)}</p>
       </div>
       <div className="rounded-2xl bg-slate-100 p-3">
         <p className="font-bold text-slate-500">Date</p>
@@ -391,7 +429,7 @@ const ExerciseCard = (props) => (
     </div>
 
     <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-      {props.exercise.intensity || "moderate"} intensity | {props.exercise.bodyWeightKg || "--"} kg basis
+      {props.exercise.intensity || "moderate"} intensity | {props.exercise.bodyWeightKg || "--"} kg body weight basis
     </p>
 
     <div className="mt-5 flex gap-3">
@@ -415,7 +453,8 @@ const ExerciseRow = (props) => (
   <tr className="border-b border-slate-100 transition hover:bg-cyan-50/60">
     <td className="px-4 py-4 text-sm font-bold text-slate-600">{props.exercise.username}</td>
     <td className="px-4 py-4 text-sm font-black text-slate-950">{props.exercise.description}</td>
-    <td className="px-4 py-4 text-sm text-slate-600">{props.exercise.duration} min</td>
+    <td className="px-4 py-4 text-sm text-slate-600">{formatWorkoutType(props.exercise)}</td>
+    <td className="px-4 py-4 text-sm text-slate-600">{formatExerciseWork(props.exercise)}</td>
     <td className="px-4 py-4 text-sm text-slate-600">{formatDate(props.exercise.date)}</td>
     <td className="px-4 py-4 text-sm text-slate-600">{props.exercise.calories || 0}</td>
     <td className="px-4 py-4">
@@ -446,11 +485,16 @@ export default class ExercisesList extends Component {
     this.state = {
       exercises: [],
       user: getStoredUser(),
+      typeFilter: "all",
       isLoading: true,
       error: ""
     };
 
     this._isMounted = false;
+  }
+
+  setExerciseTypeFilter = (typeFilter) => {
+    this.setState({ typeFilter });
   }
 
   syncUser = async () => {
@@ -548,8 +592,8 @@ export default class ExercisesList extends Component {
     }
   }
 
-  exerciseCards() {
-    return this.state.exercises.map((currentExercise) => (
+  exerciseCards(exercises) {
+    return exercises.map((currentExercise) => (
       <ExerciseCard
         exercise={currentExercise}
         deleteExercise={this.deleteExercise}
@@ -558,8 +602,8 @@ export default class ExercisesList extends Component {
     ));
   }
 
-  exerciseRows() {
-    return this.state.exercises.map((currentExercise) => (
+  exerciseRows(exercises) {
+    return exercises.map((currentExercise) => (
       <ExerciseRow
         exercise={currentExercise}
         deleteExercise={this.deleteExercise}
@@ -569,8 +613,12 @@ export default class ExercisesList extends Component {
   }
 
   render() {
-    const totalMinutes = this.state.exercises.reduce((total, exercise) => total + Number(exercise.duration || 0), 0);
-    const totalCalories = this.state.exercises.reduce((total, exercise) => total + Number(exercise.calories || 0), 0);
+    const visibleExercises = this.state.typeFilter === "all"
+      ? this.state.exercises
+      : this.state.exercises.filter((exercise) => getWorkoutType(exercise) === this.state.typeFilter);
+    const totalMinutes = visibleExercises.reduce((total, exercise) => total + Number(exercise.duration || 0), 0);
+    const totalCalories = visibleExercises.reduce((total, exercise) => total + Number(exercise.calories || 0), 0);
+    const strengthVolume = visibleExercises.reduce((total, exercise) => total + Number(exercise.volumeLoadKg || 0), 0);
 
     return (
       <div className="page-fade mx-auto max-w-7xl py-6">
@@ -593,14 +641,36 @@ export default class ExercisesList extends Component {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 flex flex-wrap gap-2">
+          {WORKOUT_TYPE_FILTERS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => this.setExerciseTypeFilter(value)}
+              className={`rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.16em] transition ${
+                this.state.typeFilter === value
+                  ? "bg-slate-950 text-white shadow-md"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Entries</p>
-            <p className="mt-2 text-4xl font-black text-slate-950">{this.state.exercises.length}</p>
+            <p className="mt-2 text-4xl font-black text-slate-950">{visibleExercises.length}</p>
           </div>
           <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Minutes</p>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Work minutes</p>
             <p className="mt-2 text-4xl font-black text-slate-950">{totalMinutes}</p>
+          </div>
+          <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Strength volume</p>
+            <p className="mt-2 text-4xl font-black text-slate-950">{Math.round(strengthVolume)}</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">kg total</p>
           </div>
           <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Estimated calories</p>
@@ -608,8 +678,8 @@ export default class ExercisesList extends Component {
           </div>
         </div>
 
-        {!this.state.isLoading && this.state.exercises.length > 0 && (
-          <ProgressCharts exercises={this.state.exercises} />
+        {!this.state.isLoading && visibleExercises.length > 0 && (
+          <ProgressCharts exercises={visibleExercises} />
         )}
 
         {this.state.isLoading && (
@@ -637,10 +707,17 @@ export default class ExercisesList extends Component {
           </div>
         )}
 
-        {this.state.exercises.length > 0 && (
+        {!this.state.isLoading && this.state.exercises.length > 0 && visibleExercises.length === 0 && (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-lg">
+            <h2 className="text-2xl font-black text-slate-950">No {this.state.typeFilter} logs yet</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Switch filters or create a new log for this training type.</p>
+          </div>
+        )}
+
+        {visibleExercises.length > 0 && (
           <>
             <div className="mt-6 grid gap-4 lg:hidden">
-              {this.exerciseCards()}
+              {this.exerciseCards(visibleExercises)}
             </div>
 
             <div className="mt-6 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg lg:block">
@@ -649,13 +726,14 @@ export default class ExercisesList extends Component {
                   <tr>
                     <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Username</th>
                     <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Exercise</th>
-                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Duration</th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Type</th>
+                    <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Work</th>
                     <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Date</th>
                     <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Calories</th>
                     <th className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.2em] text-slate-500">Actions</th>
                   </tr>
                 </thead>
-                <tbody>{this.exerciseRows()}</tbody>
+                <tbody>{this.exerciseRows(visibleExercises)}</tbody>
               </table>
             </div>
           </>

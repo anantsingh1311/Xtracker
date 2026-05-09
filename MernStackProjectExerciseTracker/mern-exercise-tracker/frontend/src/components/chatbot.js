@@ -173,7 +173,7 @@ function Chatbot() {
     }
 
     return (
-      <aside className="fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-slate-200 bg-white shadow-2xl">
+      <aside className="chatbot-panel fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-slate-200 bg-white shadow-2xl">
         <div className="rounded-t-3xl bg-slate-950 px-4 py-3 text-white">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -316,7 +316,7 @@ function Chatbot() {
   }
 
   return (
-    <aside className="fixed bottom-4 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-3xl border border-slate-200 bg-white shadow-2xl">
+    <aside className="chatbot-panel fixed bottom-4 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <div className="rounded-t-3xl bg-slate-950 px-4 py-3 text-white">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -353,7 +353,7 @@ function Chatbot() {
         )}
       </div>
 
-      <div aria-live="polite" className="max-h-80 min-h-56 space-y-3 overflow-y-auto px-4 py-4">
+      <div aria-live="polite" className="chatbot-panel__messages max-h-80 min-h-56 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <>
             <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-slate-100 px-4 py-3 text-sm text-slate-700 shadow-sm">

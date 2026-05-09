@@ -2,7 +2,7 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 const Excercise = require("../models/excercise-model");
 const requireAuth = require("../middleware/require-auth");
-const { estimateCaloriesBurned, INTENSITIES } = require("../utils/calorie-calculator");
+const { estimateCaloriesBurned, INTENSITIES, LOAD_UNITS, WORKOUT_TYPES } = require("../utils/calorie-calculator");
 
 const EXERCISE_DESCRIPTION_MAX_LENGTH = 160;
 const MAX_FUTURE_WORKOUT_DAYS = 7;
@@ -41,9 +41,18 @@ function isValidObjectId(id) {
 function buildEstimateInput(body = {}) {
     const description = sanitizeDescription(body.description);
     const duration = Number(body.duration);
+    const sets = Number(body.sets ?? body.setCount);
+    const reps = Number(body.reps ?? body.repsPerSet);
+    const loadWeight = Number(body.loadWeight ?? 0);
     const weight = Number(body.weight);
     const weightUnit = body.weightUnit === "lb" || body.weightUnit === "kg" ? body.weightUnit : "";
     const intensity = typeof body.intensity === "string" ? body.intensity.trim().toLowerCase() : "";
+    const workoutType = WORKOUT_TYPES.includes(body.workoutType)
+        ? body.workoutType
+        : Number.isFinite(sets) && sets > 0 && Number.isFinite(reps) && reps > 0
+            ? "strength"
+            : "cardio";
+    const loadUnit = LOAD_UNITS.includes(body.loadUnit) ? body.loadUnit : weightUnit || "kg";
 
     if (!description) {
         return { ok: false, status: 400, message: "Exercise description is required." };
@@ -51,10 +60,6 @@ function buildEstimateInput(body = {}) {
 
     if (description.length > EXERCISE_DESCRIPTION_MAX_LENGTH) {
         return { ok: false, status: 400, message: "Exercise description is too long." };
-    }
-
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 600) {
-        return { ok: false, status: 400, message: "Duration must be between 1 and 600 minutes." };
     }
 
     if (!weightUnit) {
@@ -69,8 +74,13 @@ function buildEstimateInput(body = {}) {
         description,
         durationMinutes: duration,
         intensity,
+        loadUnit,
+        loadWeight,
+        reps,
+        sets,
         weight,
-        weightUnit
+        weightUnit,
+        workoutType
     });
 
     if (!estimate.ok) {
@@ -80,12 +90,41 @@ function buildEstimateInput(body = {}) {
     return {
         ok: true,
         description,
-        duration,
+        duration: estimate.durationMinutes,
         estimate,
         intensity,
+        loadUnit,
+        loadWeight,
+        reps,
+        sets,
         weight,
-        weightUnit
+        weightUnit,
+        workoutType: estimate.workoutType
     };
+}
+
+function applyExerciseEstimateFields(excercise, estimateInput, username, date) {
+    const estimate = estimateInput.estimate;
+
+    excercise.username = username;
+    excercise.description = estimateInput.description;
+    excercise.workoutType = estimate.workoutType;
+    excercise.duration = estimate.durationMinutes;
+    excercise.calories = estimate.calories;
+    excercise.bodyWeightKg = estimate.bodyWeightKg;
+    excercise.weightUnit = estimateInput.weightUnit;
+    excercise.intensity = estimateInput.intensity;
+    excercise.setCount = estimate.workoutType === "strength" ? estimate.setCount : null;
+    excercise.repsPerSet = estimate.workoutType === "strength" ? estimate.repsPerSet : null;
+    excercise.totalReps = estimate.workoutType === "strength" ? estimate.totalReps : null;
+    excercise.loadWeight = estimate.workoutType === "strength" ? estimate.loadWeight : null;
+    excercise.loadUnit = estimate.workoutType === "strength" ? estimate.loadUnit : estimateInput.weightUnit;
+    excercise.loadWeightKg = estimate.workoutType === "strength" ? estimate.loadWeightKg : null;
+    excercise.volumeLoadKg = estimate.workoutType === "strength" ? estimate.volumeLoadKg : null;
+    excercise.metValue = estimate.metValue;
+    excercise.activityCategory = estimate.activityCategory;
+    excercise.calorieMethod = estimate.calorieMethod;
+    excercise.date = date;
 }
 
 router.post("/estimate", requireAuth, (req, res) => {
@@ -146,25 +185,15 @@ router.post("/add", requireAuth, async (req, res) => {
     }
 
     try {
-        const newExercise = new Excercise({
-            username: req.user.username,
-            description: estimateInput.description,
-            duration: estimateInput.duration,
-            calories: estimateInput.estimate.calories,
-            bodyWeightKg: estimateInput.estimate.bodyWeightKg,
-            weightUnit: estimateInput.weightUnit,
-            intensity: estimateInput.intensity,
-            metValue: estimateInput.estimate.metValue,
-            activityCategory: estimateInput.estimate.activityCategory,
-            calorieMethod: estimateInput.estimate.calorieMethod,
-            date
-        });
+        const newExercise = new Excercise();
+        applyExerciseEstimateFields(newExercise, estimateInput, req.user.username, date);
 
         await newExercise.save();
 
         return res.status(201).json({
             message: "Excercise added!",
-            calories: estimateInput.estimate.calories
+            calories: estimateInput.estimate.calories,
+            workoutType: estimateInput.estimate.workoutType
         });
     } catch (error) {
         return res.status(400).json({ message: "Could not save this exercise log." });
@@ -221,23 +250,14 @@ router.post("/update/:id", requireAuth, async (req, res) => {
             return res.status(403).json({ message: "Not allowed to update this exercise log" });
         }
 
-        excercise.username = req.user.username;
-        excercise.description = estimateInput.description;
-        excercise.duration = estimateInput.duration;
-        excercise.calories = estimateInput.estimate.calories;
-        excercise.bodyWeightKg = estimateInput.estimate.bodyWeightKg;
-        excercise.weightUnit = estimateInput.weightUnit;
-        excercise.intensity = estimateInput.intensity;
-        excercise.metValue = estimateInput.estimate.metValue;
-        excercise.activityCategory = estimateInput.estimate.activityCategory;
-        excercise.calorieMethod = estimateInput.estimate.calorieMethod;
-        excercise.date = date;
+        applyExerciseEstimateFields(excercise, estimateInput, req.user.username, date);
 
         await excercise.save();
 
         return res.json({
             message: "Excercise updated!",
-            calories: estimateInput.estimate.calories
+            calories: estimateInput.estimate.calories,
+            workoutType: estimateInput.estimate.workoutType
         });
     } catch (error) {
         return res.status(400).json({ message: "Could not update this exercise log." });

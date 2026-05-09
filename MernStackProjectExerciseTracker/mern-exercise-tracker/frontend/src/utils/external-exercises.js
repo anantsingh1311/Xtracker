@@ -1,6 +1,8 @@
 const API_MEDIA_URL = "https://wger.de";
 const ENGLISH_LANGUAGE_ID = 2;
 const TRUSTED_MEDIA_HOSTS = ["wger.de"];
+const CARDIO_PATTERN = /\b(cardio|run|running|jog|jogging|sprint|treadmill|walk|walking|hike|hiking|cycle|cycling|bike|biking|spin|spinning|rower|rowing machine|erg|swim|swimming|elliptical|cross trainer|stair|stairs|stepper|step mill|jump rope|skipping|hiit|burpee|burpees|circuit)\b/i;
+const STRENGTH_PATTERN = /\b(strength|bench press|squat|deadlift|press|dumbbell|barbell|kettlebell|push-up|push up|pushup|pull-up|pull up|pullup|chin-up|chin up|lunge|curl|pulldown|leg press|row|fly|raise|extension|resistance|bodyweight|calisthenics|core|plank|crunch|pilates)\b/i;
 
 export function getExerciseTranslation(exercise) {
   return exercise.translations?.find((translation) => translation.language === ENGLISH_LANGUAGE_ID && translation.name)
@@ -46,6 +48,33 @@ export function getNames(items) {
   return items?.map((item) => item.name_en || item.name).filter(Boolean) || [];
 }
 
+export function getExerciseWorkoutType(exercise) {
+  const searchableText = [
+    exercise?.workoutType,
+    exercise?.name,
+    exercise?.displayName,
+    exercise?.category,
+    exercise?.category?.name,
+    exercise?.translation?.name,
+    exercise?.descriptionText,
+    ...(exercise?.equipmentNames || []),
+    ...(exercise?.primaryMuscles || []),
+    ...(exercise?.secondaryMuscles || [])
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (exercise?.workoutType === "cardio" || CARDIO_PATTERN.test(searchableText)) {
+    return "cardio";
+  }
+
+  if (exercise?.workoutType === "strength" || STRENGTH_PATTERN.test(searchableText)) {
+    return "strength";
+  }
+
+  return "strength";
+}
+
 export function getYoutubeSearchUrl(exerciseName) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${exerciseName} exercise proper form tutorial`)}`;
 }
@@ -56,6 +85,13 @@ export function normalizeExercise(exercise) {
   const primaryMuscles = getNames(exercise.muscles);
   const secondaryMuscles = getNames(exercise.muscles_secondary);
   const equipmentNames = getNames(exercise.equipment);
+  const workoutType = getExerciseWorkoutType({
+    ...exercise,
+    displayName,
+    equipmentNames,
+    primaryMuscles,
+    secondaryMuscles
+  });
 
   return {
     ...exercise,
@@ -67,6 +103,7 @@ export function normalizeExercise(exercise) {
     primaryMuscles,
     searchIndex: [
       displayName,
+      workoutType,
       exercise.category?.name,
       ...primaryMuscles,
       ...secondaryMuscles,
@@ -76,7 +113,8 @@ export function normalizeExercise(exercise) {
       .join(" ")
       .toLowerCase(),
     secondaryMuscles,
-    translation
+    translation,
+    workoutType
   };
 }
 
@@ -93,6 +131,14 @@ export function normalizeCustomExercise(exercise) {
   const displayName = exercise.name || "";
   const categoryName = exercise.category || "Custom";
   const createdByUsername = exercise.createdByUsername || "Community member";
+  const workoutType = getExerciseWorkoutType({
+    ...exercise,
+    category: categoryName,
+    displayName,
+    equipmentNames,
+    primaryMuscles,
+    secondaryMuscles
+  });
 
   return {
     ...exercise,
@@ -110,6 +156,7 @@ export function normalizeCustomExercise(exercise) {
     primaryMuscles,
     searchIndex: [
       displayName,
+      workoutType,
       categoryName,
       ...primaryMuscles,
       ...secondaryMuscles,
@@ -125,6 +172,7 @@ export function normalizeCustomExercise(exercise) {
       name: displayName,
       description: exercise.instructions || ""
     },
-    videos: []
+    videos: [],
+    workoutType
   };
 }

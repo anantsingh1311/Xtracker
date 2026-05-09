@@ -11,9 +11,16 @@ function InfoPill({ children }) {
   );
 }
 
+const WORKOUT_TYPE_FILTERS = [
+  ["all", "All"],
+  ["cardio", "Cardio"],
+  ["strength", "Strength"]
+];
+
 export default function ExerciseLibrary() {
   const [exercises, setExercises] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -74,6 +81,10 @@ export default function ExerciseLibrary() {
   const searchWords = deferredSearchTerm.trim().toLowerCase();
   const filteredExercises = exercises
     .filter((exercise) => {
+      if (typeFilter !== "all" && exercise.workoutType !== typeFilter) {
+        return false;
+      }
+
       if (!searchWords) {
         return true;
       }
@@ -106,7 +117,7 @@ export default function ExerciseLibrary() {
           <div className="rounded-3xl border border-white/10 bg-white/10 p-5">
             <p className="text-sm font-semibold text-slate-300">Loaded exercises</p>
             <p className="mt-2 text-5xl font-black">{exercises.length}</p>
-            <p className="mt-2 text-sm text-slate-300">From the public wger exerciseinfo endpoint.</p>
+            <p className="mt-2 text-sm text-slate-300">Separated into cardio and strength options for logging.</p>
           </div>
         </div>
       </div>
@@ -121,6 +132,23 @@ export default function ExerciseLibrary() {
             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
             placeholder="Try face pull, chest, dumbbell..."
           />
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {WORKOUT_TYPE_FILTERS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTypeFilter(value)}
+                className={`rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+                  typeFilter === value
+                    ? "bg-slate-950 text-white shadow"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:text-rose-600"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           {isLoading && (
             <p className="mt-4 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">Loading exercises...</p>
@@ -144,7 +172,7 @@ export default function ExerciseLibrary() {
                 >
                   <span className="block text-sm font-black text-slate-900">{exercise.displayName}</span>
                   <span className="mt-1 block text-xs font-semibold text-slate-500">
-                    {exercise.category?.name || "No category"} {exercise.sourceType === "custom" ? "custom exercise" : hasExerciseMedia ? "with media" : "details only"}
+                    {exercise.workoutType} | {exercise.category?.name || "No category"} {exercise.sourceType === "custom" ? "custom exercise" : hasExerciseMedia ? "with media" : "details only"}
                   </span>
                 </button>
               );
@@ -176,6 +204,7 @@ export default function ExerciseLibrary() {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
+                <InfoPill>{selectedExercise.workoutType || "strength"}</InfoPill>
                 <InfoPill>ID {selectedExercise.id}</InfoPill>
                 <InfoPill>{selectedExercise.license?.short_name || "No license"}</InfoPill>
                 <InfoPill>{selectedExercise.license_author || "Community author"}</InfoPill>

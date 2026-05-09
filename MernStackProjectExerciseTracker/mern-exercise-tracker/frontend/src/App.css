@@ -2,20 +2,54 @@ html {
   scroll-behavior: smooth;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
   min-height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34rem),
     radial-gradient(circle at bottom right, rgba(244, 63, 94, 0.12), transparent 32rem),
     #f8fafc;
   color: #0f172a;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
 }
 
 button,
 a,
 input,
-select {
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  min-width: 0;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+td,
+th {
+  overflow-wrap: anywhere;
 }
 
 .page-fade {
@@ -89,6 +123,21 @@ select {
 
   .chatbot-launcher__text {
     display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .chatbot-panel {
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-height: calc(100dvh - 1.5rem);
+    overflow: hidden;
+  }
+
+  .chatbot-panel__messages {
+    max-height: min(22rem, calc(100dvh - 18rem));
   }
 }
 

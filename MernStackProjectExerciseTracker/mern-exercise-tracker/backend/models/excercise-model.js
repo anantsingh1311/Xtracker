@@ -8,6 +8,11 @@ const excerciseSchema = new Schema({
         required: true
     },
     description: { type: String, required: true, maxlength: 160, trim: true },
+    workoutType: {
+        type: String,
+        enum: ["cardio", "strength"],
+        default: "cardio"
+    },
     duration: { type: Number, required: true },
     calories: { type: Number, default: 0 },
     bodyWeightKg: { type: Number, required: true },
@@ -21,6 +26,17 @@ const excerciseSchema = new Schema({
         enum: ["light", "moderate", "vigorous"],
         required: true
     },
+    setCount: { type: Number, default: null },
+    repsPerSet: { type: Number, default: null },
+    totalReps: { type: Number, default: null },
+    loadWeight: { type: Number, default: null },
+    loadUnit: {
+        type: String,
+        enum: ["kg", "lb"],
+        default: "kg"
+    },
+    loadWeightKg: { type: Number, default: null },
+    volumeLoadKg: { type: Number, default: null },
     metValue: { type: Number, required: true },
     activityCategory: { type: String, required: true },
     calorieMethod: { type: String, required: true },

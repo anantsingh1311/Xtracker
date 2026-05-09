@@ -6,6 +6,7 @@ import { getStoredUser } from "../utils/auth";
 const initialFormState = {
   name: "",
   category: "",
+  workoutType: "strength",
   primaryMuscles: "",
   secondaryMuscles: "",
   equipment: "",
@@ -88,7 +89,7 @@ export default function CustomExerciseManager() {
             <p className="text-sm font-black uppercase tracking-[0.3em] text-lime-200">Custom exercise library</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">Add your own exercise definitions</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-              Signed-in members can save custom exercises to the database, then reuse them inside exercise search and workout logs.
+              Signed-in members can save custom cardio or strength exercises, then reuse them inside exercise search and workout logs.
             </p>
           </div>
 
@@ -128,6 +129,20 @@ export default function CustomExerciseManager() {
                 placeholder="Example: Shoulders"
                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-bold text-slate-700">Workout type</label>
+              <select
+                name="workoutType"
+                required
+                value={form.workoutType}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              >
+                <option value="cardio">Cardio</option>
+                <option value="strength">Strength</option>
+              </select>
             </div>
 
             <div>
@@ -245,7 +260,7 @@ export default function CustomExerciseManager() {
                       <h3 className="mt-1 text-lg font-black text-slate-950">{exercise.name}</h3>
                     </div>
                     <span className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm">
-                      Custom
+                      {exercise.workoutType || "strength"}
                     </span>
                   </div>
 

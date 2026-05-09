@@ -26,6 +26,8 @@ const maxMessageLength = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSA
 const maxMessageBytes = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSAGE_MAX_BYTES, 6000));
 const maxHistoryEntryLength = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_ENTRY_MAX_LENGTH, 1400));
 const maxHistoryMessages = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_MESSAGES, 16));
+const maxChatOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_MAX_OUTPUT_TOKENS, 1300));
+const planRepairOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_PLAN_REPAIR_OUTPUT_TOKENS, 1500));
 const chatRouteRateLimiter = createRateLimiter({
     max: 120,
     message: "Shaky is receiving too many messages from this connection. Please pause for a minute and try again.",
@@ -287,6 +289,7 @@ How to coach:
 - For pain, illness, injuries, eating disorders, pregnancy, or medical conditions, give conservative general safety advice and recommend a qualified professional.
 - AI usage is controlled by the member's monthly token allowance. Do not mention internal token counts unless the user asks about app limits.
 - Keep responses clear, specific, and actionable. Use short sections or bullets when helpful.
+- For workout, diet, split, routine, or schedule requests, finish the complete plan in one message with concrete days, exercises or meals, sets/reps or minutes, progression, rest/recovery, and assumptions.
 `;
 }
 
@@ -311,13 +314,50 @@ function shouldUseGoogleSearch(message) {
     return /(latest|today|recent|current|newest|research|study|studies|evidence|news|trend|guidelines)/i.test(normalizeSearchText(message));
 }
 
+function isPlanRequest(message) {
+    const normalizedMessage = normalizeSearchText(message);
+
+    return /\b(workout|training|exercise|strength|cardio|diet|meal|nutrition|recovery)\b/.test(normalizedMessage)
+        && /\b(plan|program|routine|split|schedule|create|build|make|generate)\b/.test(normalizedMessage);
+}
+
+function assessPlanReplyCompleteness(reply) {
+    const normalizedReply = normalizeChatText(reply).toLowerCase();
+    const wordCount = normalizedReply.split(/\s+/).filter(Boolean).length;
+    const completionSignals = [
+        /\b(day|week|schedule|session)\b/.test(normalizedReply),
+        /\b(set|sets|rep|reps|minute|minutes|min)\b/.test(normalizedReply),
+        /\b(rest|recovery|sleep|warm up|warm-up|cooldown|cool down)\b/.test(normalizedReply),
+        /\bprogress|progression|increase|adjust|scale\b/.test(normalizedReply),
+        /\bassumption|assuming|based on\b/.test(normalizedReply)
+    ].filter(Boolean).length;
+    const hasUnfinishedEnding = /(continue|and so on|etc\.?|more later|next response|part 2)$/i.test(normalizedReply)
+        || /(\.\.\.|,$|:$)/.test(normalizedReply);
+
+    return wordCount >= 180 && completionSignals >= 4 && !hasUnfinishedEnding;
+}
+
+function buildPlanRepairPrompt(originalMessage, incompleteReply) {
+    return `
+The previous answer to this user request was too incomplete for production use.
+
+Original user request:
+${originalMessage}
+
+Incomplete draft summary:
+${normalizeChatText(incompleteReply).slice(0, 1200)}
+
+Now provide one complete, concise plan. Include assumptions, the schedule, exact exercises or meals, sets/reps or minutes, intensity/rest guidance, progression, recovery, and how to adjust if the user is a beginner. Do not mention that you are repairing a draft.
+`;
+}
+
 function shouldTryNextGeminiModel(error) {
     const statusCode = Number(error?.response?.status || 0);
 
     return statusCode === 404 || statusCode === 429 || statusCode === 500 || statusCode === 503;
 }
 
-async function createGeminiChatCompletion(history, message, userDoc) {
+async function createGeminiChatCompletion(history, message, userDoc, options = {}) {
     if (!process.env.GEMINI_API_KEY) {
         return null;
     }
@@ -335,7 +375,7 @@ async function createGeminiChatCompletion(history, message, userDoc) {
                     },
                     contents: buildGeminiContents(history, message),
                     generationConfig: {
-                        maxOutputTokens: 900,
+                        maxOutputTokens: options.maxOutputTokens || maxChatOutputTokens,
                         temperature: 0.72
                     },
                     ...(shouldUseGoogleSearch(message)
@@ -413,7 +453,9 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
 
     try {
         const geminiResult = await createGeminiChatCompletion(history, message, req.userDoc);
-        const reply = extractGeminiReplyText(geminiResult?.data);
+        let reply = extractGeminiReplyText(geminiResult?.data);
+        let responseModel = geminiResult?.model;
+        let extraTokenEstimate = 0;
 
         if (!reply) {
             return res.status(503).json({
@@ -427,9 +469,32 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
             });
         }
 
+        if (isPlanRequest(message) && !assessPlanReplyCompleteness(reply)) {
+            try {
+                const repairPrompt = buildPlanRepairPrompt(message, reply);
+                const repairResult = await createGeminiChatCompletion(
+                    [...history, { role: "assistant", text: reply }],
+                    repairPrompt,
+                    req.userDoc,
+                    { maxOutputTokens: planRepairOutputTokens }
+                );
+                const repairedReply = extractGeminiReplyText(repairResult?.data);
+
+                if (repairedReply && (assessPlanReplyCompleteness(repairedReply) || repairedReply.length > reply.length)) {
+                    extraTokenEstimate = estimateTokensFromText(repairPrompt) + estimateTokensFromText(repairedReply);
+                    reply = repairedReply;
+                    responseModel = repairResult.model;
+                }
+            } catch (repairError) {
+                console.warn("Gemini plan quality retry failed:", {
+                    message: repairError?.message || "Unknown error"
+                });
+            }
+        }
+
         const aiQuota = await recordAiTokenUsage(
             req.userDoc,
-            estimatedRequestTokens + estimateTokensFromText(reply)
+            estimatedRequestTokens + estimateTokensFromText(reply) + extraTokenEstimate
         );
 
         return res.json({
@@ -437,7 +502,7 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
             aiTokenLimitEnabled: true,
             dailyLimitEnabled: false,
             fallback: false,
-            model: `gemini:${geminiResult.model}`,
+            model: `gemini:${responseModel}`,
             profile: buildFitnessProfilePayload(req.userDoc),
             reply,
             unlimited: false
@@ -464,8 +529,10 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
 
 module.exports = router;
 module.exports._test = {
+    assessPlanReplyCompleteness,
     buildCoachSystemInstruction,
     buildUserMessagePart,
+    isPlanRequest,
     normalizeChatText,
     normalizeHistory,
     normalizeSearchText
