@@ -21,7 +21,7 @@ const { ensureBootstrapAdmin } = require("./utils/admin-bootstrap");
 const { assertProductionSessionSecret } = require("./utils/session-token");
 
 const app = express();
-const port = Number(process.env.PORT) || 5000;
+const port = process.env.PORT || 5000;
 const mongoUri = process.env.ATLAS_URI;
 const isProduction = process.env.NODE_ENV === "production";
 
