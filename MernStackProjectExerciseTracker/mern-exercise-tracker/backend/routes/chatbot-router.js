@@ -25,7 +25,7 @@ const geminiTimeoutMs = readPositiveNumber(process.env.GEMINI_TIMEOUT_MS, 30000)
 const maxMessageLength = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSAGE_MAX_LENGTH, 1800));
 const maxMessageBytes = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSAGE_MAX_BYTES, 6000));
 const maxHistoryEntryLength = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_ENTRY_MAX_LENGTH, 1400));
-const maxHistoryMessages = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_MESSAGES, 16));
+const maxHistoryMessages = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_MESSAGES, 4));
 const maxChatOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_MAX_OUTPUT_TOKENS, 1300));
 const planRepairOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_PLAN_REPAIR_OUTPUT_TOKENS, 1500));
 const chatRouteRateLimiter = createRateLimiter({
@@ -376,7 +376,7 @@ async function createGeminiChatCompletion(history, message, userDoc, options = {
                     contents: buildGeminiContents(history, message),
                     generationConfig: {
                         maxOutputTokens: options.maxOutputTokens || maxChatOutputTokens,
-                        temperature: 0.72
+                        temperature: 0.55
                     },
                     ...(shouldUseGoogleSearch(message)
                         ? {
