@@ -54,19 +54,20 @@ const buildIndexPath = path.join(buildPath, "index.html");
 assertProductionSessionSecret();
 
 function buildCorsOptions() {
-    if (clientOrigins.length) {
-        return {
-            origin(origin, callback) {
-                if (!origin || clientOrigins.includes(normalizeOrigin(origin))) {
-                    return callback(null, true);
-                }
+  if (clientOrigins.length) {
+    return {
+      origin(origin, callback) {
+        if (!origin || clientOrigins.includes(normalizeOrigin(origin))) {
+          return callback(null, true);
+        }
 
-                return callback(new Error("Not allowed by CORS"));
-            }
-        };
-    }
+        return callback(new Error("Not allowed by CORS"));
+      },
+      credentials: true
+    };
+  }
 
-    return isProduction ? null : undefined;
+  return isProduction ? null : undefined;
 }
 
 function buildContentSecurityPolicy() {
