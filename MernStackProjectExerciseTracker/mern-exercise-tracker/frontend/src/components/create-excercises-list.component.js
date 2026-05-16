@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { useNavigate } from "react-router-dom";
 import { fetchCustomExercises, fetchExternalExercises, post } from "../services/api";
 import { formatDateInputValue, getWorkoutDateInputBounds } from "../utils/date-input";
 import { normalizeCustomExercise, normalizeExercises } from "../utils/external-exercises";
@@ -31,7 +32,7 @@ function saveWorkoutProfile(profile) {
     window.localStorage.setItem(LAST_WORKOUT_PROFILE_KEY, JSON.stringify(profile));
 }
 
-export default class CreateExercise extends Component {
+class CreateExercise extends Component {
     constructor(props) {
         super(props);
 
@@ -91,7 +92,7 @@ export default class CreateExercise extends Component {
         const loggedInUser = getStoredUser();
 
         if (!loggedInUser) {
-            window.location = "/login-user";
+            this.props.navigate("/login-user", { replace: true });
             return;
         }
 
@@ -381,7 +382,7 @@ export default class CreateExercise extends Component {
                 weightUnit: this.state.weightUnit,
                 workoutType: this.state.workoutType
             });
-            window.location = "/Excercises";
+            this.props.navigate("/Excercises");
         } catch (err) {
             if (process.env.NODE_ENV !== "production") {
                 console.error(err);
@@ -681,4 +682,10 @@ export default class CreateExercise extends Component {
             </div>
         );
     }
+}
+
+export default function CreateExerciseWithNavigate(props) {
+    const navigate = useNavigate();
+
+    return <CreateExercise {...props} navigate={navigate} />;
 }

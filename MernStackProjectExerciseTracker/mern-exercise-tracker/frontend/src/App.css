@@ -1,5 +1,7 @@
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 *,
@@ -11,6 +13,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  width: 100%;
   background:
     radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 34rem),
     radial-gradient(circle at bottom right, rgba(244, 63, 94, 0.12), transparent 32rem),
@@ -21,11 +24,27 @@ body {
 
 #root {
   min-height: 100vh;
+  min-width: 0;
 }
 
 img,
 svg,
 video {
+  max-width: 100%;
+}
+
+main,
+section,
+article,
+aside,
+form,
+header,
+nav,
+div {
+  min-width: 0;
+}
+
+table {
   max-width: 100%;
 }
 
@@ -37,6 +56,8 @@ textarea {
   -webkit-tap-highlight-color: transparent;
   font: inherit;
   min-width: 0;
+  max-width: 100%;
+  touch-action: manipulation;
 }
 
 p,
@@ -78,10 +99,14 @@ th {
 
 .navbar-desktop-links {
   display: none;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .navbar-menu-button {
   display: inline-flex;
+  flex-shrink: 0;
 }
 
 @media (min-width: 640px) {
@@ -94,13 +119,19 @@ th {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1180px) {
   .navbar-desktop-links {
     display: flex;
   }
 
   .navbar-menu-button {
     display: none;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1179px) {
+  .lg\:grid-cols-\[360px_1fr\] {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   }
 }
 
@@ -115,7 +146,86 @@ th {
   }
 }
 
+@media (min-width: 640px) and (max-width: 899px) {
+  .sm\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 480px) {
+  [class*="tracking-["] {
+    letter-spacing: 0.08em;
+  }
+
+  .text-6xl,
+  .text-5xl {
+    font-size: clamp(2.25rem, 11vw, 3rem);
+    line-height: 1.05;
+  }
+
+  .text-4xl {
+    font-size: clamp(2rem, 9vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  .text-3xl {
+    font-size: clamp(1.5rem, 7vw, 1.875rem);
+    line-height: 1.12;
+  }
+
+  .text-2xl {
+    font-size: 1.35rem;
+    line-height: 1.18;
+  }
+
+  .p-8,
+  .p-6 {
+    padding: 1.25rem;
+  }
+
+  .px-6,
+  .px-5 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .py-6 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .py-4 {
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+  }
+
+  [class*="rounded-3xl"] {
+    border-radius: 1.25rem;
+  }
+
+  a[class*="uppercase"],
+  button[class*="uppercase"] {
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .inline-flex {
+    flex-wrap: wrap;
+  }
+
+  .h-64 {
+    height: 12rem;
+  }
+
+  header nav a[href="/"] > span:last-child > span:last-child {
+    display: none;
+  }
+
+  header nav a[href="/"] > span:first-child {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
   .chatbot-launcher {
     gap: 0;
     padding: 0.625rem;
@@ -127,17 +237,67 @@ th {
 }
 
 @media (max-width: 640px) {
+  main.page-fade {
+    padding-bottom: 6rem;
+  }
+
+  .panel-fade,
+  .soft-card {
+    max-width: 100%;
+  }
+
+  [class*="min-h-[calc(100vh-9rem)]"] {
+    min-height: auto;
+  }
+
+  [class*="max-h-[620px]"] {
+    max-height: min(26rem, 62vh);
+  }
+
   .chatbot-panel {
     bottom: max(0.75rem, env(safe-area-inset-bottom));
     left: 0.75rem;
     right: 0.75rem;
+    display: flex;
+    flex-direction: column;
     width: auto;
     max-height: calc(100dvh - 1.5rem);
     overflow: hidden;
   }
 
   .chatbot-panel__messages {
+    flex: 1 1 auto;
+    min-height: 10rem;
     max-height: min(22rem, calc(100dvh - 18rem));
+  }
+
+  .chatbot-panel form {
+    flex-wrap: wrap;
+  }
+
+  .chatbot-panel form input {
+    flex: 1 1 min(16rem, 100%);
+  }
+
+  .chatbot-panel form button {
+    flex: 1 1 6rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .chatbot-panel form {
+    flex-direction: column;
+  }
+
+  .chatbot-panel form button {
+    width: 100%;
+  }
+}
+
+@media (hover: none) {
+  .soft-card:hover,
+  [class*="hover:-translate-y"]:hover {
+    transform: none;
   }
 }
 

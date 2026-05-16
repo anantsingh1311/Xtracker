@@ -24,10 +24,13 @@ const geminiEnableGoogleSearch = process.env.GEMINI_ENABLE_GOOGLE_SEARCH !== "fa
 const geminiTimeoutMs = readPositiveNumber(process.env.GEMINI_TIMEOUT_MS, 30000);
 const maxMessageLength = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSAGE_MAX_LENGTH, 1800));
 const maxMessageBytes = Math.floor(readPositiveNumber(process.env.CHATBOT_MESSAGE_MAX_BYTES, 6000));
+const maxImageBytes = Math.floor(readPositiveNumber(process.env.CHATBOT_IMAGE_MAX_BYTES, 4 * 1024 * 1024));
+const imageTokenEstimate = Math.floor(readPositiveNumber(process.env.CHATBOT_IMAGE_TOKEN_ESTIMATE, 1200));
 const maxHistoryEntryLength = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_ENTRY_MAX_LENGTH, 1400));
 const maxHistoryMessages = Math.floor(readPositiveNumber(process.env.CHATBOT_HISTORY_MESSAGES, 4));
 const maxChatOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_MAX_OUTPUT_TOKENS, 1300));
 const planRepairOutputTokens = Math.floor(readPositiveNumber(process.env.CHATBOT_PLAN_REPAIR_OUTPUT_TOKENS, 1500));
+const allowedImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const chatRouteRateLimiter = createRateLimiter({
     max: 120,
     message: "Shaky is receiving too many messages from this connection. Please pause for a minute and try again.",
@@ -124,6 +127,62 @@ function normalizeChatText(value) {
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function normalizeChatImage(value) {
+    if (!value) {
+        return null;
+    }
+
+    if (typeof value !== "object") {
+        const error = new Error("Image upload is invalid.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const mimeType = normalizeChatText(value.mimeType).toLowerCase();
+    const rawData = typeof value.data === "string" ? value.data.trim() : "";
+    const base64Data = rawData.includes(",") ? rawData.split(",").pop().trim() : rawData;
+
+    if (!allowedImageMimeTypes.has(mimeType)) {
+        const error = new Error("Please upload a JPG, PNG, or WebP image.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!base64Data || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64Data)) {
+        const error = new Error("Image upload could not be read.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const byteLength = Buffer.byteLength(base64Data, "base64");
+
+    if (byteLength > maxImageBytes) {
+        const maxMb = Math.max(1, Math.floor(maxImageBytes / (1024 * 1024)));
+        const error = new Error(`Image must be smaller than ${maxMb} MB.`);
+        error.statusCode = 413;
+        throw error;
+    }
+
+    return {
+        byteLength,
+        data: base64Data,
+        mimeType
+    };
+}
+
+function buildImagePromptContext(hasImage) {
+    if (!hasImage) {
+        return "";
+    }
+
+    return [
+        "The user attached one body photo for this request.",
+        "Use it only for cautious, visible fitness observations such as posture, broad muscle balance, and general body-composition context.",
+        "Do not identify the person, infer sensitive traits, diagnose conditions, or claim exact body-fat percentage.",
+        "Tell the user that XTracker does not store uploaded photos and that this image is processed only for the current analysis."
+    ].join("\n");
 }
 
 function calculateEditDistance(left, right, maxDistance) {
@@ -232,18 +291,33 @@ function normalizeHistory(history) {
         .slice(-maxHistoryMessages);
 }
 
-function buildUserMessagePart(message) {
+function buildUserMessagePart(message, image) {
     const normalizedIntent = normalizeSearchText(message);
     const normalizedRaw = normalizeChatText(message).toLowerCase();
+    const imageContext = buildImagePromptContext(Boolean(image));
+    const messageText = imageContext
+        ? `${imageContext}\n\nUser message:\n${message}`
+        : message;
 
     if (normalizedIntent && normalizedIntent !== normalizedRaw) {
-        return `User message:\n${message}\n\nTypo-normalized intent hints:\n${normalizedIntent}`;
+        return `${messageText}\n\nTypo-normalized intent hints:\n${normalizedIntent}`;
     }
 
-    return message;
+    return messageText;
 }
 
-function buildGeminiContents(history, message) {
+function buildGeminiContents(history, message, image) {
+    const userParts = [{ text: buildUserMessagePart(message, image) }];
+
+    if (image) {
+        userParts.push({
+            inline_data: {
+                data: image.data,
+                mime_type: image.mimeType
+            }
+        });
+    }
+
     return [
         ...normalizeHistory(history).map((entry) => ({
             role: entry.role === "assistant" ? "model" : "user",
@@ -251,7 +325,7 @@ function buildGeminiContents(history, message) {
         })),
         {
             role: "user",
-            parts: [{ text: buildUserMessagePart(message) }]
+            parts: userParts
         }
     ];
 }
@@ -287,6 +361,7 @@ How to coach:
 - Ask concise follow-up questions only when the missing detail materially changes the answer.
 - Stay within fitness, nutrition, recovery, and XTracker app guidance. If a request is unrelated, steer back politely.
 - For pain, illness, injuries, eating disorders, pregnancy, or medical conditions, give conservative general safety advice and recommend a qualified professional.
+- If a user uploads a body photo, use only visible fitness-relevant observations. Be cautious, do not claim exact body-fat percentage, and remind them that XTracker does not store uploaded photos.
 - AI usage is controlled by the member's monthly token allowance. Do not mention internal token counts unless the user asks about app limits.
 - Keep responses clear, specific, and actionable. Use short sections or bullets when helpful.
 - For workout, diet, split, routine, or schedule requests, finish the complete plan in one message with concrete days, exercises or meals, sets/reps or minutes, progression, rest/recovery, and assumptions.
@@ -373,7 +448,7 @@ async function createGeminiChatCompletion(history, message, userDoc, options = {
                     system_instruction: {
                         parts: [{ text: buildCoachSystemInstruction(userDoc) }]
                     },
-                    contents: buildGeminiContents(history, message),
+                    contents: buildGeminiContents(history, message, options.image || null),
                     generationConfig: {
                         maxOutputTokens: options.maxOutputTokens || maxChatOutputTokens,
                         temperature: 0.55
@@ -432,6 +507,22 @@ router.get("/usage", requireAuth, (req, res) => {
 router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
     const message = normalizeChatText(req.body?.message);
     const history = normalizeHistory(req.body?.history);
+    let chatImage = null;
+
+    try {
+        chatImage = normalizeChatImage(req.body?.image);
+        if (req.body) {
+            req.body.image = null;
+        }
+    } catch (error) {
+        if (req.body) {
+            req.body.image = null;
+        }
+
+        return res.status(error.statusCode || 400).json({
+            message: error.message || "Image upload is invalid."
+        });
+    }
 
     if (!message) {
         return res.status(400).json({ message: "Message is required." });
@@ -441,7 +532,7 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
         return res.status(400).json({ message: `Message must be ${maxMessageLength} characters or less.` });
     }
 
-    const estimatedRequestTokens = estimateChatRequestTokens(message, history);
+    const estimatedRequestTokens = estimateChatRequestTokens(message, history) + (chatImage ? imageTokenEstimate : 0);
 
     if (!hasAvailableAiTokens(req.userDoc, estimatedRequestTokens)) {
         return res.status(429).json({
@@ -452,7 +543,9 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
     }
 
     try {
-        const geminiResult = await createGeminiChatCompletion(history, message, req.userDoc);
+        const geminiResult = await createGeminiChatCompletion(history, message, req.userDoc, {
+            image: chatImage
+        });
         let reply = extractGeminiReplyText(geminiResult?.data);
         let responseModel = geminiResult?.model;
         let extraTokenEstimate = 0;
@@ -464,12 +557,13 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
                 model: "gemini-empty-response",
                 aiQuota: buildAiQuotaPayload(req.userDoc),
                 profile: buildFitnessProfilePayload(req.userDoc),
+                imageProcessed: Boolean(chatImage),
                 reply: buildModelUnavailableReply(req.userDoc),
                 unlimited: false
             });
         }
 
-        if (isPlanRequest(message) && !assessPlanReplyCompleteness(reply)) {
+        if (!chatImage && isPlanRequest(message) && !assessPlanReplyCompleteness(reply)) {
             try {
                 const repairPrompt = buildPlanRepairPrompt(message, reply);
                 const repairResult = await createGeminiChatCompletion(
@@ -502,6 +596,7 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
             aiTokenLimitEnabled: true,
             dailyLimitEnabled: false,
             fallback: false,
+            imageProcessed: Boolean(chatImage),
             model: `gemini:${responseModel}`,
             profile: buildFitnessProfilePayload(req.userDoc),
             reply,
@@ -521,9 +616,15 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
             model: "gemini-unavailable",
             aiQuota: buildAiQuotaPayload(req.userDoc),
             profile: buildFitnessProfilePayload(req.userDoc),
+            imageProcessed: Boolean(chatImage),
             reply: buildModelUnavailableReply(req.userDoc),
             unlimited: false
         });
+    } finally {
+        if (chatImage) {
+            chatImage.data = "";
+            chatImage = null;
+        }
     }
 });
 

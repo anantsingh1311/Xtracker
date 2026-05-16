@@ -1,18 +1,38 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { post } from "../services/api";
 import { getStoredUser, hasCompletedFitnessProfile, isAdmin, saveStoredUser } from "../utils/auth";
 import { queueToast, showToast } from "../utils/toast";
 
-function getPostLoginPath(user) {
-    if (isAdmin(user)) {
-        return "/admin";
-    }
+function getRequestedPath(location) {
+    const requestedPath = location?.state?.from;
 
-    return hasCompletedFitnessProfile(user) ? "/create" : "/profile";
+    return requestedPath && requestedPath !== "/login-user" ? requestedPath : "";
 }
 
-export default class LoginUser extends Component {
+function getPostLoginPath(user, requestedPath = "") {
+    if (isAdmin(user)) {
+        return requestedPath || "/admin";
+    }
+
+    if (!hasCompletedFitnessProfile(user)) {
+        return "/profile";
+    }
+
+    if (requestedPath && requestedPath !== "/admin" && requestedPath !== "/user") {
+        return requestedPath;
+    }
+
+    return "/create";
+}
+
+function assertSessionPayload(user) {
+    if (!user?.userId || !user?.username || !user?.token) {
+        throw new Error("The login service did not return a valid session. Check that the frontend is connected to the backend API.");
+    }
+}
+
+class LoginUser extends Component {
 
     constructor(props) {
         super(props);
@@ -31,7 +51,7 @@ export default class LoginUser extends Component {
         const storedUser = getStoredUser();
 
         if (storedUser) {
-            window.location.replace(getPostLoginPath(storedUser));
+            this.props.navigate(getPostLoginPath(storedUser, getRequestedPath(this.props.location)), { replace: true });
         }
     }
 
@@ -58,6 +78,7 @@ export default class LoginUser extends Component {
 
         try {
             const user = await post("/api/login", logInUser);
+            assertSessionPayload(user);
 
             this.setState({
                 username: "",
@@ -75,7 +96,7 @@ export default class LoginUser extends Component {
                 title: "Login successful",
                 type: "success"
             });
-            window.location.replace(getPostLoginPath(user));
+            this.props.navigate(getPostLoginPath(user, getRequestedPath(this.props.location)), { replace: true });
         } catch (err) {
             if (process.env.NODE_ENV !== "production") {
                 console.error(err);
@@ -160,4 +181,11 @@ export default class LoginUser extends Component {
             </div>
         );
     }
+}
+
+export default function LoginUserWithRouter(props) {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    return <LoginUser {...props} location={location} navigate={navigate} />;
 }

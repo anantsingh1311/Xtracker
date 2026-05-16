@@ -25,6 +25,7 @@ const WORKOUT_TYPE_FILTERS = [
   ["cardio", "Cardio"],
   ["strength", "Strength"]
 ];
+const PROGRESS_REFRESH_INTERVAL_MS = 60000;
 const STRENGTH_CATEGORY_PATTERN = /\b(strength|core|pilates|press|squat|deadlift|curl|lunge|plank|push|pull|row|raise|extension)\b/i;
 
 const getWorkoutType = (exercise) => {
@@ -186,6 +187,12 @@ const ProgressCharts = ({ exercises }) => {
     value: toPositiveNumber(day[field])
   }));
 
+  React.useEffect(() => {
+    if (chartRows.length > 0) {
+      setActiveIndex(chartRows.length - 1);
+    }
+  }, [chartRows.length, metricKey, mode]);
+
   if (chartRows.length === 0) {
     return null;
   }
@@ -222,6 +229,7 @@ const ProgressCharts = ({ exercises }) => {
             <div>
               <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-700">Progress dashboard</p>
               <h2 className="mt-2 text-2xl font-black text-slate-950">Your fitness journey</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">Updates automatically from your saved workout logs.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {PROGRESS_METRICS.map((item) => (
@@ -491,10 +499,19 @@ export default class ExercisesList extends Component {
     };
 
     this._isMounted = false;
+    this.progressRefreshTimer = null;
   }
 
   setExerciseTypeFilter = (typeFilter) => {
     this.setState({ typeFilter });
+  }
+
+  refreshProgress = () => {
+    if (!this.state.user?.username) {
+      return;
+    }
+
+    this.loadExercises(this.state.user.username, { showLoading: false });
   }
 
   syncUser = async () => {
@@ -519,6 +536,8 @@ export default class ExercisesList extends Component {
   componentDidMount() {
     this._isMounted = true;
     window.addEventListener("storage", this.syncUser);
+    window.addEventListener("focus", this.refreshProgress);
+    this.progressRefreshTimer = window.setInterval(this.refreshProgress, PROGRESS_REFRESH_INTERVAL_MS);
 
     const { user } = this.state;
     if (user && user.username) {
@@ -531,9 +550,14 @@ export default class ExercisesList extends Component {
   componentWillUnmount() {
     this._isMounted = false;
     window.removeEventListener("storage", this.syncUser);
+    window.removeEventListener("focus", this.refreshProgress);
+
+    if (this.progressRefreshTimer) {
+      window.clearInterval(this.progressRefreshTimer);
+    }
   }
 
-  async loadExercises(username = this.state.user?.username) {
+  async loadExercises(username = this.state.user?.username, options = {}) {
     if (!username) {
       if (this._isMounted) {
         this.setState({ exercises: [], isLoading: false, error: "" });
@@ -541,7 +565,13 @@ export default class ExercisesList extends Component {
       return;
     }
 
-    this.setState({ isLoading: true, error: "" });
+    const { showLoading = true } = options;
+
+    if (showLoading) {
+      this.setState({ isLoading: true, error: "" });
+    } else {
+      this.setState({ error: "" });
+    }
 
     try {
       const exercises = await get(`/exercise/${username}`);

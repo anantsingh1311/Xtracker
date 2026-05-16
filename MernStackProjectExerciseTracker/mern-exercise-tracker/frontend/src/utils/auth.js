@@ -104,9 +104,11 @@ export function isAdmin(user = getStoredUser()) {
   return user?.role === "admin";
 }
 
-export function clearStoredUser() {
+export function clearStoredUser(options = {}) {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    notifyAuthChange();
+    if (options.notify !== false) {
+      notifyAuthChange();
+    }
   }
 }

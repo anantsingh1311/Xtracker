@@ -8,6 +8,8 @@ const { buildFitnessProfilePayload, normalizeFitnessProfile } = require("../util
 
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_BYTES = 72;
+const NAME_MIN_LENGTH = 2;
+const NAME_MAX_LENGTH = 32;
 const USERNAME_MAX_LENGTH = 32;
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const signupRateLimiter = createRateLimiter({
@@ -19,6 +21,10 @@ const signupRateLimiter = createRateLimiter({
 
 function normalizeUsername(value) {
     return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeName(value) {
+    return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 }
 
 function getPasswordByteLength(password) {
@@ -58,9 +64,14 @@ router.post("/profile", requireAuth, async (req, res) => {
 });
 
 router.post("/add", signupRateLimiter, async (req, res) => {
+    const name = normalizeName(req.body?.name);
     const username = normalizeUsername(req.body?.username);
     const password = typeof req.body?.password === "string" ? req.body.password : "";
     const profileResult = normalizeFitnessProfile(req.body);
+
+    if (!name || name.length < NAME_MIN_LENGTH || name.length > NAME_MAX_LENGTH) {
+        return res.status(400).json({ message: "Name must be 2 to 32 characters." });
+    }
 
     if (!username || username.length < 3 || username.length > USERNAME_MAX_LENGTH || !USERNAME_PATTERN.test(username)) {
         return res.status(400).json({ message: "Username must be 3 to 32 characters and can only use letters, numbers, dots, underscores, or hyphens." });
@@ -83,6 +94,7 @@ router.post("/add", signupRateLimiter, async (req, res) => {
 
         const newUser = new User({
             fitnessProfile: profileResult.profile,
+            name,
             username,
             password
         });

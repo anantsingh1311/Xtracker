@@ -1,11 +1,33 @@
 import axios from "axios";
 import { clearStoredUser, getStoredToken } from "../utils/auth";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
+const LOCAL_API_BASE_URL = "http://localhost:5000";
 const EXTERNAL_EXERCISES_CACHE_KEY = "xt_external_exercises_cache_v1";
 const EXTERNAL_EXERCISES_CACHE_TTL_MS = 1000 * 60 * 60 * 12;
 const CHATBOT_HISTORY_LIMIT = 10;
 const CHATBOT_TIMEOUT_MS = Number(process.env.REACT_APP_CHATBOT_TIMEOUT_MS) || 45000;
+
+function isLocalBrowserOrigin() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+export function resolveApiBaseUrl() {
+  if (process.env.REACT_APP_API_BASE_URL) {
+    return process.env.REACT_APP_API_BASE_URL;
+  }
+
+  if (isLocalBrowserOrigin() && window.location.port !== "5000") {
+    return LOCAL_API_BASE_URL;
+  }
+
+  return process.env.NODE_ENV === "production" ? "" : LOCAL_API_BASE_URL;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -104,7 +126,7 @@ export async function remove(path, config) {
   return response.data;
 }
 
-export async function sendChatMessage(message, history = []) {
+export async function sendChatMessage(message, history = [], image = null) {
   const trimmedMessage = typeof message === "string" ? message.trim() : "";
 
   if (!trimmedMessage) {
@@ -121,10 +143,19 @@ export async function sendChatMessage(message, history = []) {
         }))
     : [];
 
-  return post("/api/chat", {
+  const payload = {
     message: trimmedMessage,
     history: normalizedHistory
-  }, {
+  };
+
+  if (image?.mimeType && image?.data) {
+    payload.image = {
+      data: image.data,
+      mimeType: image.mimeType
+    };
+  }
+
+  return post("/api/chat", payload, {
     timeout: CHATBOT_TIMEOUT_MS
   });
 }

@@ -21,6 +21,12 @@ const userSchema = new Schema({
         maxlength: 32,
         match: /^[A-Za-z0-9_.-]+$/
     },
+    name: {
+        type: String,
+        trim: true,
+        minlength: 2,
+        maxlength: 32
+    },
     password: {
         type: String,
         required: true,

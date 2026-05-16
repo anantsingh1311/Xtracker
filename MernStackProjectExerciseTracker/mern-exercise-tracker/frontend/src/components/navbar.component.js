@@ -37,9 +37,9 @@ export default class Navbar extends Component {
   }
 
   handleLogout = () => {
-    clearStoredUser();
+    clearStoredUser({ notify: false });
     this.setState({ user: null, isMenuOpen: false });
-    window.location = '/';
+    window.location.replace("/");
   }
 
   renderLinks(isMobileMenu = false) {
@@ -47,7 +47,7 @@ export default class Navbar extends Component {
     const linkClass = "rounded-2xl px-4 py-2 text-sm font-bold text-slate-200 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-4 focus:ring-cyan-400/30";
     const builderLinkClass = isMobileMenu
       ? `${linkClass} border border-white/10 bg-white/5`
-      : `${linkClass} hidden border border-white/10 bg-white/5 xl:inline-flex`;
+      : `${linkClass} hidden border border-white/10 bg-white/5 2xl:inline-flex`;
     const builderLink = (
       <a
         onClick={this.closeMenu}
@@ -108,21 +108,21 @@ export default class Navbar extends Component {
               </span>
             </Link>
 
-          <div className="navbar-desktop-links hidden items-center gap-2 md:flex">
+          <div className="navbar-desktop-links hidden items-center gap-2 xl:flex">
             {this.renderLinks()}
           </div>
 
             <button
               type="button"
               onClick={this.toggleMenu}
-              className="navbar-menu-button rounded-2xl border border-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-400/30 md:hidden"
+              className="navbar-menu-button rounded-2xl border border-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-cyan-400/30 xl:hidden"
               aria-expanded={this.state.isMenuOpen}
             >
               Menu
             </button>
           </div>
 
-          <div className={`grid transition-all duration-300 md:hidden ${this.state.isMenuOpen ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className={`grid transition-all duration-300 xl:hidden ${this.state.isMenuOpen ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
             <div className="overflow-hidden">
               <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
                 {this.renderLinks(true)}

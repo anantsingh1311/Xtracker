@@ -5,6 +5,8 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const dns = require("dns")
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 dotenv.config({ path: path.resolve(__dirname, ".env"), quiet: true });
 dotenv.config({ quiet: true });
@@ -118,7 +120,13 @@ const corsOptions = buildCorsOptions();
 if (corsOptions !== null) {
     app.use(cors(corsOptions));
 }
-app.use(express.json({ limit: "100kb" }));
+app.use((req, res, next) => {
+    const jsonLimit = req.method === "POST" && req.path === "/api/chat"
+        ? process.env.CHATBOT_JSON_BODY_LIMIT || "6mb"
+        : "100kb";
+
+    return express.json({ limit: jsonLimit })(req, res, next);
+});
 
 mongoose.connection.on("error", (error) => {
     console.error("MongoDB connection error:", error.message);

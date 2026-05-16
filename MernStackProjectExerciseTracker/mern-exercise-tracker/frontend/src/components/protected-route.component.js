@@ -1,15 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { getStoredUser, hasCompletedFitnessProfile, isAdmin, isAuthenticated } from "../utils/auth";
+import { getAuthChangeEventName, getStoredUser, hasCompletedFitnessProfile, isAdmin } from "../utils/auth";
 
 export default function ProtectedRoute({ children, requireAdmin = false, requireProfile = true }) {
   const location = useLocation();
+  const [user, setUser] = useState(() => getStoredUser());
 
-  if (!isAuthenticated()) {
+  useEffect(() => {
+    const syncUser = () => setUser(getStoredUser());
+
+    window.addEventListener("storage", syncUser);
+    window.addEventListener(getAuthChangeEventName(), syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener(getAuthChangeEventName(), syncUser);
+    };
+  }, []);
+
+  if (!user) {
     return <Navigate to="/login-user" replace state={{ from: location.pathname }} />;
   }
 
-  const user = getStoredUser();
   if (requireAdmin && !isAdmin(user)) {
     return <Navigate to="/create" replace />;
   }
