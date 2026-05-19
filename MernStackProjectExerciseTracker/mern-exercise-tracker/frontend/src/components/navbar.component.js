@@ -65,6 +65,7 @@ export default class Navbar extends Component {
       return (
         <>
           {builderLink}
+          <Link onClick={this.closeMenu} to="/plans" className={linkClass}>Pro Plans</Link>
           <Link onClick={this.closeMenu} to="/login-user" className={linkClass}>Log In</Link>
           <Link onClick={this.closeMenu} to="/user" className={linkClass}>Create User</Link>
         </>
@@ -79,6 +80,7 @@ export default class Navbar extends Component {
         <Link onClick={this.closeMenu} to="/exercise-library" className={linkClass}>Exercise Library</Link>
         <Link onClick={this.closeMenu} to="/custom-exercises/new" className={linkClass}>Add Exercise</Link>
         <Link onClick={this.closeMenu} to="/profile" className={linkClass}>Profile</Link>
+        <Link onClick={this.closeMenu} to="/plans" className={linkClass}>Pro</Link>
         <Link onClick={this.closeMenu} to="/create" className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:-translate-y-0.5 hover:bg-lime-300 focus:outline-none focus:ring-4 focus:ring-cyan-300/40">
           Create Log
         </Link>

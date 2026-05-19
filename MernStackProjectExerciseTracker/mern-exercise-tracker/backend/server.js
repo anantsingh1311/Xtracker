@@ -15,6 +15,7 @@ const excerciseRouter = require("./routes/excercise");
 const userRouter = require("./routes/user");
 const authUserRoutes = require("./routes/auth");
 const adminRouter = require("./routes/admin");
+const billingRouter = require("./routes/billing");
 const externalExerciseRouter = require("./routes/externalExercises");
 const customExerciseRouter = require("./routes/custom-exercises");
 const chatbotRouter = require("./routes/chatbot-router");
@@ -76,14 +77,15 @@ function buildContentSecurityPolicy() {
     const directives = [
         "default-src 'self'",
         "base-uri 'self'",
-        "connect-src 'self'",
+        "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
         "font-src 'self' data:",
-        "form-action 'self'",
+        "form-action 'self' https://api.razorpay.com https://*.razorpay.com",
+        "frame-src 'self' https://api.razorpay.com https://*.razorpay.com",
         "frame-ancestors 'none'",
-        "img-src 'self' data: blob: https://wger.de https://*.wger.de",
+        "img-src 'self' data: blob: https://wger.de https://*.wger.de https://cdn.razorpay.com",
         "media-src 'self' blob: https://wger.de https://*.wger.de",
         "object-src 'none'",
-        "script-src 'self'",
+        "script-src 'self' https://checkout.razorpay.com",
         "style-src 'self' 'unsafe-inline'"
     ];
 
@@ -103,7 +105,7 @@ app.use((req, res, next) => {
         "Content-Security-Policy": buildContentSecurityPolicy(),
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Resource-Policy": "same-origin",
-        "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+        "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(self \"https://api.razorpay.com\" \"https://checkout.razorpay.com\"), usb=()",
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "X-Request-Id": req.requestId,
         "X-Content-Type-Options": "nosniff",
@@ -152,6 +154,7 @@ app.get("/health", (req, res) => {
 
 app.use("/exercise", excerciseRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api/user", userRouter);
 app.use("/api/custom-exercises", customExerciseRouter);
 app.use("/api", authUserRoutes);

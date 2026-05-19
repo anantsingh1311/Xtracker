@@ -16,6 +16,7 @@ import Chatbot from './components/chatbot';
 import ToastHost from "./components/toast.component";
 import FitnessProfile from "./components/fitness-profile.component";
 import AdminDashboard from "./components/admin-dashboard.component";
+import BillingPlans from "./components/billing-plans.component";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/Excercises" element={<ProtectedRoute><ExercisesList/></ProtectedRoute>} />
             <Route path="/exercise-library" element={<ProtectedRoute><ExerciseLibrary /></ProtectedRoute>} />
             <Route path="/login-user" element={<LoginUser />} />
+            <Route path="/plans" element={<BillingPlans />} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin requireProfile={false}><AdminDashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute requireProfile={false}><FitnessProfile /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><EditExercise /></ProtectedRoute>} />

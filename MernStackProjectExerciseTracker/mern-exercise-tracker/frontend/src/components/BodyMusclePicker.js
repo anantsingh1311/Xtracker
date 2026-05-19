@@ -359,7 +359,7 @@ function BackBodyBase() {
   );
 }
 
-function BodyMusclePicker({ selectedMuscle, onSelectMuscle, disabled }) {
+function BodyMusclePicker({ selectedMuscle, onSelectMuscle, disabled, expanded = false }) {
   const [view, setView] = useState("front");
   const parts = useMemo(() => allMuscleParts.filter((part) => part.view === view), [view]);
   const selectedPart = allMuscleParts.find((part) => part.id === selectedMuscle);
@@ -371,7 +371,7 @@ function BodyMusclePicker({ selectedMuscle, onSelectMuscle, disabled }) {
   };
 
   return (
-    <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+    <div className={`${expanded ? "" : "mt-3"} rounded-3xl border border-slate-200 bg-slate-50 p-4`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           Train by body part
@@ -399,7 +399,7 @@ function BodyMusclePicker({ selectedMuscle, onSelectMuscle, disabled }) {
       <div className="overflow-hidden rounded-3xl bg-white px-2 py-3 shadow-inner">
         <svg
           viewBox="0 0 360 420"
-          className="mx-auto block h-auto w-full max-w-[320px]"
+          className={`mx-auto block h-auto w-full ${expanded ? "max-w-[520px]" : "max-w-[320px]"}`}
           role="img"
           aria-label={`${view} interactive body muscle map`}
         >

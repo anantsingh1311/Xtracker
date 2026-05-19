@@ -9,7 +9,11 @@ function getDefaultMonthlyTokenLimit() {
 }
 
 function getMaxMonthlyTokenLimit() {
-    return readPositiveInteger(process.env.MAX_AI_MONTHLY_TOKEN_LIMIT, getDefaultMonthlyTokenLimit());
+    const defaultLimit = getDefaultMonthlyTokenLimit();
+    const proMonthlyLimit = readPositiveInteger(process.env.XTRACKER_PRO_MONTHLY_AI_TOKENS, 150000);
+    const proYearlyLimit = readPositiveInteger(process.env.XTRACKER_PRO_YEARLY_AI_TOKENS, 300000);
+
+    return readPositiveInteger(process.env.MAX_AI_MONTHLY_TOKEN_LIMIT, Math.max(defaultLimit, proMonthlyLimit, proYearlyLimit));
 }
 
 function getTokenLimitInputStep() {

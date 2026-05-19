@@ -170,6 +170,22 @@ export async function fetchCurrentUser() {
   return get("/api/user");
 }
 
+export async function fetchBillingPlans() {
+  return get("/api/billing/plans");
+}
+
+export async function fetchBillingStatus() {
+  return get("/api/billing/status");
+}
+
+export async function createBillingOrder(planId) {
+  return post("/api/billing/orders", { planId });
+}
+
+export async function verifyBillingPayment(payload) {
+  return post("/api/billing/verify", payload);
+}
+
 export async function saveFitnessProfile(profile) {
   return post("/api/user/profile", profile);
 }

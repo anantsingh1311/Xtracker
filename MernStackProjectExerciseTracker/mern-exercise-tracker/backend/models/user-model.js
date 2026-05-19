@@ -57,6 +57,91 @@ const userSchema = new Schema({
             type: Date
         }
     },
+    billing: {
+        plan: {
+            type: String,
+            enum: ["free", "pro_monthly", "pro_yearly"],
+            default: "free"
+        },
+        status: {
+            type: String,
+            enum: ["free", "active", "expired"],
+            default: "free"
+        },
+        paidUntil: {
+            type: Date
+        },
+        lastPayment: {
+            provider: {
+                type: String,
+                trim: true
+            },
+            planId: {
+                type: String,
+                trim: true
+            },
+            orderId: {
+                type: String,
+                trim: true
+            },
+            paymentId: {
+                type: String,
+                trim: true
+            },
+            amount: {
+                type: Number,
+                min: 0
+            },
+            currency: {
+                type: String,
+                trim: true,
+                uppercase: true,
+                maxlength: 3
+            },
+            paidAt: {
+                type: Date
+            }
+        },
+        pendingOrders: [{
+            provider: {
+                type: String,
+                trim: true
+            },
+            planId: {
+                type: String,
+                trim: true
+            },
+            orderId: {
+                type: String,
+                trim: true
+            },
+            amount: {
+                type: Number,
+                min: 0
+            },
+            currency: {
+                type: String,
+                trim: true,
+                uppercase: true,
+                maxlength: 3
+            },
+            status: {
+                type: String,
+                enum: ["created", "paid", "failed"],
+                default: "created"
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            },
+            verifiedAt: {
+                type: Date
+            }
+        }],
+        updatedAt: {
+            type: Date
+        }
+    },
     fitnessProfile: {
         bodyWeightKg: {
             type: Number,

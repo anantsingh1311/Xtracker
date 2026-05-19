@@ -537,8 +537,10 @@ router.post("/", requireAuth, chatRouteRateLimiter, async (req, res) => {
     if (!hasAvailableAiTokens(req.userDoc, estimatedRequestTokens)) {
         return res.status(429).json({
             aiQuota: buildAiQuotaPayload(req.userDoc),
-            message: "Your AI token allowance for this month has been used. Ask an admin for more tokens.",
-            profile: buildFitnessProfilePayload(req.userDoc)
+            message: "Your free AI allowance is used up. Upgrade to Shaky Pro to keep using AI coaching.",
+            profile: buildFitnessProfilePayload(req.userDoc),
+            redirectTo: "/plans",
+            upgradeRequired: true
         });
     }
 

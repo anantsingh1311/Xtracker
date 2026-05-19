@@ -35,12 +35,12 @@ export default class Home extends Component {
 
                 <div className="home-hero-grid grid items-start gap-8">
                     <div className="home-hero-copy panel-fade pt-2">
-                        <p className="text-sm font-black uppercase tracking-[0.35em] text-cyan-700">Exercise tracking made simple</p>
+                        <p className="text-sm font-black uppercase tracking-[0.35em] text-cyan-700">India-first AI workout tracking</p>
                         <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                            Log smarter workouts with searchable exercise data.
+                            Log workouts and turn them into personal coaching.
                         </h1>
                         <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-                            XTracker helps you search exercises, understand the movement, record duration and auto-estimated calories, then review your workout history from one clean dashboard.
+                            XTracker combines exercise search, saved measurements, body-map prompts, photo-aware Shaky AI coaching, and UPI-friendly Pro passes for Indian fitness users.
                         </p>
 
                         <div className="home-cta-row mt-8 flex flex-col gap-3">
@@ -55,6 +55,12 @@ export default class Home extends Component {
                                 className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center text-sm font-black uppercase tracking-[0.2em] text-slate-950 no-underline shadow-lg transition hover:-translate-y-1 hover:border-rose-300 hover:text-rose-600 focus:outline-none focus:ring-4 focus:ring-rose-100"
                             >
                                 Explore Library
+                            </Link>
+                            <Link
+                                to="/plans"
+                                className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center text-sm font-black uppercase tracking-[0.2em] text-slate-950 no-underline shadow-lg transition hover:-translate-y-1 hover:border-cyan-300 hover:text-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-100"
+                            >
+                                View Pro Plans
                             </Link>
                             {user && (
                                 <Link
@@ -114,19 +120,19 @@ export default class Home extends Component {
                     )}
 
                     <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
-                        <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-700">Searchable</p>
-                        <h2 className="mt-3 text-2xl font-black text-slate-950">External exercise library</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">Browse public exercise data with instructions and media where available.</p>
+                        <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-700">Personalized</p>
+                        <h2 className="mt-3 text-2xl font-black text-slate-950">Shaky AI coach</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">Use saved measurements, body-map selections, and training logs to get practical workout and diet guidance.</p>
                     </div>
                     <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg">
-                        <p className="text-sm font-black uppercase tracking-[0.2em] text-rose-600">Trackable</p>
-                        <h2 className="mt-3 text-2xl font-black text-slate-950">Duration and calories</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">Capture workout details and let XTracker estimate calories for each saved session.</p>
+                        <p className="text-sm font-black uppercase tracking-[0.2em] text-rose-600">Flexible</p>
+                        <h2 className="mt-3 text-2xl font-black text-slate-950">No gym lock-in</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">Plan around home workouts, local gyms, bodyweight sessions, or equipment you actually have.</p>
                     </div>
                     <div className="soft-card rounded-3xl border border-slate-200 bg-white p-5 shadow-lg sm:col-span-2 lg:col-span-1">
-                        <p className="text-sm font-black uppercase tracking-[0.2em] text-lime-700">Responsive</p>
-                        <h2 className="mt-3 text-2xl font-black text-slate-950">Ready for review</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">Layouts adapt across mobile, tablet, and desktop with consistent interactions.</p>
+                        <p className="text-sm font-black uppercase tracking-[0.2em] text-lime-700">Monetizable</p>
+                        <h2 className="mt-3 text-2xl font-black text-slate-950">UPI-friendly Pro pass</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">Monthly and annual Razorpay plans unlock higher Shaky AI usage without forcing auto-debit on day one.</p>
                     </div>
                 </div>
 
